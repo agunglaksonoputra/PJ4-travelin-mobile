@@ -1,20 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:travelin/pages/OnReport_page.dart';
+import 'pages/login_page.dart';
+import 'pages/signup_page.dart';
+import 'pages/homepage.dart';
+import 'pages/actual_page.dart';
+import 'pages/report_page.dart';
+import 'pages/reservasi_page.dart';
+import 'pages/OnPaymen_page.dart';
+import 'pages/OnPlaning_page.dart';
 
 void main() {
-  runApp(const MainApp());
+  runApp(const MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Travelin',
+      theme: ThemeData(
+        primarySwatch: Colors.teal,
+        scaffoldBackgroundColor: Colors.grey[100],
       ),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/signup': (context) => const SignupPage(),
+        '/home': (context) => const HomePage(),
+        '/actual': (context) => const ActualPage(),
+        '/report': (context) => const ReportPage(),
+        '/reservasi': (context) => const ReservasiPage(),
+        '/planning': (context) => const OnPlanningPage(),
+        '/payment_progress': (context) => const OnPaymentPage(),
+        '/OnReport' : (context) => const OnReportPage(),
+        '/report_progress': (context) => const ReportPage(),
+      },
     );
   }
 }
