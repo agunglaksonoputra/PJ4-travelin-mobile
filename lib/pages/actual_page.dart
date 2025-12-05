@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/vehicle_service.dart';
 import '../widgets/bottom_navbar.dart';
 
 class ActualPage extends StatefulWidget {
@@ -9,16 +10,35 @@ class ActualPage extends StatefulWidget {
 }
 
 class _ActualPageState extends State<ActualPage> {
-  String selectedVehicle = "Vehicle 1";
-  List<String> vehicleList = [
-    "Vehicle 1",
-    "Vehicle 2",
-    "Vehicle 3",
-    "Vehicle 4",
-    "Vehicle 5",
-  ];
+  String selectedVehicle = "";
+  List<String> vehicleList = [];
 
   bool isDropdownOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadVehicles();
+  }
+
+  // ===============================
+  // LOAD VEHICLE FROM API (FIX)
+  // ===============================
+  Future<void> loadVehicles() async {
+    try {
+      final List vehicles = await VehicleService.getVehicles();
+
+      setState(() {
+        // ambil field brand
+        vehicleList = vehicles.map<String>((v) => v["brand"].toString()).toList();
+
+        selectedVehicle =
+            vehicleList.isNotEmpty ? vehicleList.first : "";
+      });
+    } catch (e) {
+      print("Error load vehicle: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,14 +71,14 @@ class _ActualPageState extends State<ActualPage> {
                     title: "On Planning",
                     trip: 20,
                     amount: "20.000.000",
-                    onTap: () => Navigator.pushNamed(context, '/planning'),
+                    onTap: () => Navigator.pushNamed(context, '/OnPlanning'),
                   ),
                   _buildTripCard(
                     title: "On Progress of Payment",
                     trip: 15,
                     amount: "10.000.000",
-                    onTap:
-                        () => Navigator.pushNamed(context, '/payment_progress'),
+                    onTap: () =>
+                        Navigator.pushNamed(context, '/OnPayment_progress'),
                   ),
                   _buildTripCard(
                     title: "On Progress of Report",
@@ -96,6 +116,9 @@ class _ActualPageState extends State<ActualPage> {
     );
   }
 
+  // ===============================
+  // DROPDOWN VEHICLE
+  // ===============================
   Widget _buildVehicleDropdown() {
     return Column(
       children: [
@@ -122,26 +145,24 @@ class _ActualPageState extends State<ActualPage> {
                     const Icon(Icons.directions_bus, color: Colors.black87),
                     const SizedBox(width: 8),
                     Text(
-                      selectedVehicle,
+                      selectedVehicle.isNotEmpty
+                          ? selectedVehicle
+                          : "Select Vehicle",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    const SizedBox(width: 8),
-                    Icon(
-                      isDropdownOpen
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      color: Colors.black87,
-                    ),
-                  ],
+                Icon(
+                  isDropdownOpen
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: Colors.black87,
                 ),
               ],
             ),
           ),
         ),
+
         if (isDropdownOpen)
           Container(
             margin: const EdgeInsets.only(top: 6),
@@ -158,53 +179,48 @@ class _ActualPageState extends State<ActualPage> {
               ],
             ),
             child: Column(
-              children:
-                  vehicleList.map((vehicle) {
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          selectedVehicle = vehicle;
-                          isDropdownOpen = false;
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 16,
+              children: vehicleList.map((vehicle) {
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      selectedVehicle = vehicle;
+                      isDropdownOpen = false;
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 16,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.directions_bus, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          vehicle,
+                          style: TextStyle(
+                            color: vehicle == selectedVehicle
+                                ? Colors.blue
+                                : Colors.black87,
+                            fontWeight: vehicle == selectedVehicle
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.directions_bus,
-                              color: Colors.black87,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              vehicle,
-                              style: TextStyle(
-                                color:
-                                    vehicle == selectedVehicle
-                                        ? Colors.blue
-                                        : Colors.black87,
-                                fontWeight:
-                                    vehicle == selectedVehicle
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
       ],
     );
   }
 
-  // 🔹 Card status perjalanan
+  // ===============================
+  // CARD STATUS PERJALANAN
+  // ===============================
   Widget _buildTripCard({
     required String title,
     required int trip,
@@ -238,11 +254,7 @@ class _ActualPageState extends State<ActualPage> {
                     color: const Color(0xFFE6F0FF),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.description,
-                    color: Colors.blue,
-                    size: 20,
-                  ),
+                  child: const Icon(Icons.description, color: Colors.blue),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -260,27 +272,17 @@ class _ActualPageState extends State<ActualPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "Trip",
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                Text(
-                  "$trip",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                const Text("Trip"),
+                Text("$trip",
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "Amount",
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                Text(
-                  "Rp $amount",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                const Text("Amount"),
+                Text("Rp $amount",
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
           ],

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/user_service.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/planning_table.dart';
 import '../widgets/bottom_navbar.dart';
@@ -13,6 +15,26 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
+  String username = "Loading...";
+  final UserService api = UserService(); 
+
+  @override
+  void initState() {
+    super.initState();
+    loadUser();
+  }
+
+  Future<void> loadUser() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storedUsername = prefs.getString("username");
+
+    if (storedUsername != null && storedUsername.isNotEmpty) {
+      username = storedUsername;
+    } else {
+      username = await api.getUserName();
+    }
+    setState(() {});
+  }
 
   void onItemTapped(int index) {
     setState(() => selectedIndex = index);
@@ -41,19 +63,18 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.grey.shade100,
       body: SafeArea(
         child: Padding(
-          // ✅ Perkecil jarak bawah agar tabel bisa lebih panjang
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // === Header ===
+              // HEADER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'WELCOME,',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -62,8 +83,8 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       Text(
-                        'Mr. Smith',
-                        style: TextStyle(
+                        username,
+                        style: const TextStyle(
                           fontSize: 22,
                           color: Colors.black,
                           fontWeight: FontWeight.w600,
@@ -73,12 +94,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                   Row(
                     children: [
-                      // 🔹 Ikon notifikasi (tidak ada aksi)
                       _circleIcon(Icons.notifications_none),
-
                       const SizedBox(width: 20),
-
-                      // 🔹 Ikon profil — pindah ke halaman login
                       GestureDetector(
                         onTap: () {
                           Navigator.pushNamed(context, '/login');
@@ -92,7 +109,7 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 20),
 
-              // === Summary ===
+              // SUMMARY
               const Text(
                 'SUMMARY',
                 style: TextStyle(
@@ -102,6 +119,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 12),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
@@ -120,6 +138,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const SizedBox(height: 8),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
@@ -140,7 +159,7 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 24),
 
-              // === Planning ===
+              // PLANNING
               const Text(
                 'PLANNING',
                 style: TextStyle(
@@ -151,9 +170,8 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 12),
 
-              // ✅ Diperpanjang dengan Expanded agar lebih tinggi
               const Expanded(
-                flex: 3, // Sebelumnya default 1, sekarang 3 biar lebih panjang
+                flex: 3,
                 child: PlanningTable(),
               ),
             ],
@@ -161,9 +179,8 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
 
-      // === Tombol + (Floating Action Button) ===
+      // FLOATING BUTTON
       floatingActionButton: Padding(
-        // ✅ Geser lebih ke bawah
         padding: const EdgeInsets.only(bottom: 8, right: 8),
         child: SizedBox(
           width: 50,
@@ -179,6 +196,7 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
+      // BOTTOM NAVBAR
       bottomNavigationBar: BottomNavBar(
         currentIndex: selectedIndex,
         onTap: onItemTapped,
@@ -186,7 +204,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // === Helper untuk ikon header ===
+  // ICON HELPER
   static Widget _circleIcon(IconData icon) {
     return Container(
       width: 52,
