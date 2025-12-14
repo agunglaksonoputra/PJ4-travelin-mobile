@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:travelin/widgets/input_field.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_flushbar.dart';
+import '../widgets/custom_input_field.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -96,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 40),
 
-              InputField(
+              CustomInputField(
                   label: "Username",
                   icon: FontAwesomeIcons.envelope,
                   hint: "Enter your username",
@@ -105,7 +105,7 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 12),
 
-              InputField(
+              CustomInputField(
                 label: "Password",
                 icon: FontAwesomeIcons.lock,
                 hint: "Enter your password",

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:travelin/pages/OnReport_page.dart';
+import 'package:travelin/pages/reservation_page.dart';
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/homepage.dart';
 import 'pages/actual_page.dart';
 import 'pages/report_page.dart';
-import 'pages/reservasi_page.dart';
 import 'pages/OnPaymen_page.dart';
 import 'pages/OnPlaning_page.dart';
 
@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/actual': (context) => const ActualPage(),
         '/report': (context) => const ReportPage(),
-        '/reservasi': (context) => const ReservasiPage(),
+        '/reservation': (context) => const ReservationPage(),
         '/OnPlanning': (context) => const OnPlanningPage(),
         '/OnPayment_progress': (context) => const OnPaymentPage(),
         '/OnReport' : (context) => const OnReportPage(),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class InputField extends StatelessWidget {
+class CustomInputField extends StatelessWidget {
   final String label;
   final IconData icon;
   final String hint;
@@ -9,7 +9,7 @@ class InputField extends StatelessWidget {
   final bool obscure;
   final VoidCallback? onToggleVisibility;
 
-  const InputField({
+  const CustomInputField({
     super.key,
     required this.label,
     required this.icon,
@@ -29,6 +29,7 @@ class InputField extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.black87,
+            fontSize: 14
           ),
         ),
 
@@ -37,12 +38,13 @@ class InputField extends StatelessWidget {
         TextField(
           controller: controller,
           obscureText: obscure,
+          style: TextStyle(fontSize: 12),
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.grey.shade200,
-            prefixIcon: Icon(icon),
+            prefixIcon: Icon(icon, size: 20),
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey.shade600),
+            hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 12),
             suffixIcon: onToggleVisibility != null
                 ? IconButton(
               icon: Icon(
@@ -58,10 +60,7 @@ class InputField extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 14,
-              horizontal: 16,
-            ),
+            contentPadding: const EdgeInsets.all(12)
           ),
         ),
       ],
