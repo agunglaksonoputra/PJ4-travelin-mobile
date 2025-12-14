@@ -1,36 +1,58 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
 import '../models/user_models.dart';
+import '../utils/app_logger.dart';
 
 class AuthService {
-  final String baseUrl = "http://localhost:3000/api/v1"; // sesuaikan API
+  static final String baseUrl = ApiConfig.baseUrl(ApiVersion.v1);
 
   // LOGIN
   Future<UserModel?> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': email,
+          'password': password,
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      final resp = jsonDecode(response.body);
+      // AppLogger.d('Login response status: ${response.statusCode}');
+      // AppLogger.d('Login response body: ${response.body}');
 
-      if (resp['success'] == true && resp['data'] != null) {
-        final userData = resp['data']['user'];
-        final token = resp['data']['token'];
+      if (response.statusCode == 200) {
+        final resp = jsonDecode(response.body);
 
-        // Simpan token di SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", token);
+        if (resp['success'] == true && resp['data'] != null) {
+          final userData = resp['data']['user'];
+          final token = resp['data']['token'];
 
-        // Kembalikan UserModel
-        return UserModel.fromJson(userData);
+          // Simpan token
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString("token", token);
+
+          AppLogger.i('Login success for $email');
+
+          return UserModel.fromJson(userData);
+        } else {
+          AppLogger.w('Login failed: invalid response structure');
+        }
+      } else {
+        AppLogger.w(
+          'Login failed with status ${response.statusCode}',
+        );
       }
-    } else {
-      print('Login failed: ${response.body}');
+    } catch (e, s) {
+      AppLogger.e(
+        'Login exception occurred',
+        error: e,
+        stackTrace: s,
+      );
     }
+
     return null;
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:travelin/pages/OnReport_page.dart';
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
@@ -9,7 +10,9 @@ import 'pages/reservasi_page.dart';
 import 'pages/OnPaymen_page.dart';
 import 'pages/OnPlaning_page.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
+
   runApp(const MyApp());
 }
 

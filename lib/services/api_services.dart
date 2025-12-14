@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
 
 class ApiServices {
-  static const String baseUrl = "http://192.168.1.10:3000/api/v1";
+  static final String baseUrl = ApiConfig.baseUrl(ApiVersion.v1);
 
   // Ambil headers termasuk token jika ada
   static Future<Map<String, String>> getHeaders() async {
