@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -17,8 +18,8 @@ class BottomNavBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFF2F2F2), // 🔹 Warna abu muda background
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(40),
-          topRight: Radius.circular(40),
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
         ),
         boxShadow: [
           BoxShadow(
@@ -31,9 +32,9 @@ class BottomNavBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(Icons.home, "Home", 0),
-          _buildNavItem(Icons.list_alt, "Actual", 1),
-          _buildNavItem(Icons.receipt_long, "Report", 2),
+          _buildNavItem(FontAwesomeIcons.house, "Home", 0),
+          _buildNavItem(FontAwesomeIcons.listCheck, "Actual", 1),
+          _buildNavItem(FontAwesomeIcons.fileInvoice, "Report", 2),
         ],
       ),
     );
@@ -49,7 +50,7 @@ class BottomNavBar extends StatelessWidget {
         children: [
           Icon(
             icon,
-            size: 28,
+            size: 20,
             color: isActive ? Colors.black : Colors.grey, // 🔹 Warna aktif: hitam
           ),
           const SizedBox(height: 4),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/user_service.dart';
 import '../widgets/summary_card.dart';
@@ -62,119 +63,109 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // HEADER
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'WELCOME,',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          fontSize: 20,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // HEADER
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'WELCOME,',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontSize: 20,
+                          ),
                         ),
-                      ),
-                      Text(
-                        username,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w600,
+                        Text(
+                          username,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      _circleIcon(Icons.notifications_none),
-                      const SizedBox(width: 20),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, '/login');
-                        },
-                        child: _circleIcon(Icons.account_circle_outlined),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // SUMMARY
-              const Text(
-                'SUMMARY',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontSize: 18,
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        _circleIcon(FontAwesomeIcons.bell),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/login');
+                          },
+                          child: _circleIcon(FontAwesomeIcons.user),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  SummaryCard(
-                    color: Color(0xFF00BFA6),
-                    title: 'Saldo Usaha',
-                    amount: 'Rp 1.000.000',
-                    icon: Icons.wallet,
-                  ),
-                  SummaryCard(
-                    color: Color(0xFF9C27B0),
-                    title: 'Profit Bulan ini',
-                    amount: 'Rp 1.000.000',
-                    icon: Icons.local_offer,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(height: 20),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  SummaryCard(
-                    color: Color(0xFFFF9800),
-                    title: 'Pendapatan',
-                    amount: 'Rp 1.000.000',
-                    icon: Icons.spa,
+                // SUMMARY
+                const Text(
+                  'SUMMARY',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontSize: 18,
                   ),
-                  SummaryCard(
-                    color: Color(0xFFE53935),
-                    title: 'Saldo Usaha',
-                    amount: 'Rp 1.000.000',
-                    icon: Icons.money_off,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // PLANNING
-              const Text(
-                'PLANNING',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontSize: 18,
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              const Expanded(
-                flex: 3,
-                child: PlanningTable(),
-              ),
-            ],
+                Column(
+                  children: [
+                    SummaryCard(
+                      color: Color(0xFF00BFA6),
+                      title: 'Pendapatan',
+                      amount: 'Rp 1.000.000',
+                      icon: FontAwesomeIcons.handHoldingDollar,
+                    ),
+                    const SizedBox(height: 8),
+                    SummaryCard(
+                      color: Color(0xFFE52F1D),
+                      title: 'Pengeluaran',
+                      amount: 'Rp 1.000.000',
+                      icon: FontAwesomeIcons.moneyBillTransfer,
+                    ),
+                    const SizedBox(height: 8),
+                    SummaryCard(
+                      color: Color(0xFF9D00FF),
+                      title: 'Profit',
+                      amount: 'Rp 1.000.000',
+                      icon: FontAwesomeIcons.sackDollar,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // PLANNING
+                const Text(
+                  'PLANNING',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // const Expanded(
+                //   flex: 3,
+                //   child: PlanningTable(),
+                // ),
+              ],
+            ),
           ),
         ),
       ),
@@ -207,8 +198,8 @@ class _HomePageState extends State<HomePage> {
   // ICON HELPER
   static Widget _circleIcon(IconData icon) {
     return Container(
-      width: 52,
-      height: 52,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
@@ -216,7 +207,7 @@ class _HomePageState extends State<HomePage> {
           BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6),
         ],
       ),
-      child: Icon(icon, color: Colors.black, size: 28),
+      child: Icon(icon, color: Colors.black, size: 18),
     );
   }
 }
