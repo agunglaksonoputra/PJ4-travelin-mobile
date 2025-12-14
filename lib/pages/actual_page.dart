@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:travelin/widgets/trip_card.dart';
 import '../services/vehicle_service.dart';
 import '../widgets/bottom_navbar.dart';
 
@@ -51,12 +53,6 @@ class _ActualPageState extends State<ActualPage> {
           "Actual",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacementNamed(context, '/home');
-          },
-        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -67,29 +63,33 @@ class _ActualPageState extends State<ActualPage> {
             Expanded(
               child: ListView(
                 children: [
-                  _buildTripCard(
+                  TripCard(
                     title: "On Planning",
                     trip: 20,
                     amount: "20.000.000",
+                    icon: FontAwesomeIcons.clipboardList,
                     onTap: () => Navigator.pushNamed(context, '/OnPlanning'),
                   ),
-                  _buildTripCard(
+                  TripCard(
                     title: "On Progress of Payment",
                     trip: 15,
                     amount: "10.000.000",
+                    icon: FontAwesomeIcons.moneyBillWave,
                     onTap: () =>
                         Navigator.pushNamed(context, '/OnPayment_progress'),
                   ),
-                  _buildTripCard(
+                  TripCard(
                     title: "On Progress of Report",
                     trip: 12,
                     amount: "8.500.000",
+                    icon: FontAwesomeIcons.fileLines,
                     onTap: () => Navigator.pushNamed(context, '/OnReport'),
                   ),
-                  _buildTripCard(
+                  TripCard(
                     title: "Closed",
                     trip: 25,
                     amount: "25.000.000",
+                    icon: FontAwesomeIcons.circleCheck,
                     onTap: () => Navigator.pushNamed(context, '/report'),
                   ),
                 ],
@@ -142,8 +142,8 @@ class _ActualPageState extends State<ActualPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.directions_bus, color: Colors.black87),
-                    const SizedBox(width: 8),
+                    const Icon(FontAwesomeIcons.bus, color: Colors.black87, size: 20),
+                    const SizedBox(width: 12),
                     Text(
                       selectedVehicle.isNotEmpty
                           ? selectedVehicle
@@ -154,9 +154,10 @@ class _ActualPageState extends State<ActualPage> {
                 ),
                 Icon(
                   isDropdownOpen
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
+                      ? FontAwesomeIcons.angleUp
+                      : FontAwesomeIcons.angleDown,
                   color: Colors.black87,
+                  size: 20,
                 ),
               ],
             ),
@@ -215,79 +216,6 @@ class _ActualPageState extends State<ActualPage> {
             ),
           ),
       ],
-    );
-  }
-
-  // ===============================
-  // CARD STATUS PERJALANAN
-  // ===============================
-  Widget _buildTripCard({
-    required String title,
-    required int trip,
-    required String amount,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 3,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE6F0FF),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.description, color: Colors.blue),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Divider(height: 1, color: Colors.black12),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Trip"),
-                Text("$trip",
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Amount"),
-                Text("Rp $amount",
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
