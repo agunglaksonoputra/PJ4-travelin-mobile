@@ -1,64 +1,107 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/api_config.dart';
 
 class ApiServices {
-  static final String baseUrl = ApiConfig.baseUrl(ApiVersion.v1);
+  static const Duration _timeout = Duration(seconds: 15);
 
-  // Ambil headers termasuk token jika ada
-  static Future<Map<String, String>> getHeaders() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString("token");
+  static Future<Map<String, String>> _headers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
 
     return {
-      "Content-Type": "application/json",
-      if (token != null) "Authorization": "Bearer $token",
+      HttpHeaders.contentTypeHeader: "application/json",
+      if (token != null && token.isNotEmpty)
+        HttpHeaders.authorizationHeader: "Bearer $token",
     };
   }
 
-  // GET request
-  static Future<dynamic> get(String endpoint) async {
-    final headers = await getHeaders();
-    final response = await http.get(Uri.parse("$baseUrl/$endpoint"), headers: headers);
-    return _handle(response);
-  }
+  static Future<dynamic> get(
+      String baseUrl,
+      String endpoint,
+      ) =>
+      _request("GET", baseUrl, endpoint);
 
-  // POST request
-  static Future<dynamic> post(String endpoint, Map<String, dynamic> body) async {
-    final headers = await getHeaders();
-    final response = await http.post(
-      Uri.parse("$baseUrl/$endpoint"),
-      headers: headers,
-      body: jsonEncode(body),
-    );
-    return _handle(response);
-  }
+  static Future<dynamic> post(
+      String baseUrl,
+      String endpoint,
+      Map<String, dynamic> body,
+      ) =>
+      _request("POST", baseUrl, endpoint, body: body);
 
-  // PUT request
-  static Future<dynamic> put(String endpoint, Map<String, dynamic> body) async {
-    final headers = await getHeaders();
-    final response = await http.put(
-      Uri.parse("$baseUrl/$endpoint"),
-      headers: headers,
-      body: jsonEncode(body),
-    );
-    return _handle(response);
-  }
+  static Future<dynamic> put(
+      String baseUrl,
+      String endpoint,
+      Map<String, dynamic> body,
+      ) =>
+      _request("PUT", baseUrl, endpoint, body: body);
 
-  // DELETE request
-  static Future<dynamic> delete(String endpoint) async {
-    final headers = await getHeaders();
-    final response = await http.delete(Uri.parse("$baseUrl/$endpoint"), headers: headers);
-    return _handle(response);
-  }
+  static Future<dynamic> delete(
+      String baseUrl,
+      String endpoint,
+      ) =>
+      _request("DELETE", baseUrl, endpoint);
 
-  // Handle response
-  static dynamic _handle(http.Response response) {
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception("Error ${response.statusCode} → ${response.body}");
+  static Future<dynamic> _request(
+      String method,
+      String baseUrl,
+      String endpoint, {
+        Map<String, dynamic>? body,
+      }) async {
+    final uri = Uri.parse("$baseUrl/$endpoint");
+    final headers = await _headers();
+
+    http.Response response;
+
+    try {
+      switch (method) {
+        case "GET":
+          response = await http
+              .get(uri, headers: headers)
+              .timeout(_timeout);
+          break;
+        case "POST":
+          response = await http
+              .post(uri, headers: headers, body: jsonEncode(body))
+              .timeout(_timeout);
+          break;
+        case "PUT":
+          response = await http
+              .put(uri, headers: headers, body: jsonEncode(body))
+              .timeout(_timeout);
+          break;
+        case "DELETE":
+          response = await http
+              .delete(uri, headers: headers)
+              .timeout(_timeout);
+          break;
+        default:
+          throw Exception("Unsupported HTTP method");
+      }
+
+      return _handle(response);
+    } on SocketException {
+      throw Exception("No internet connection");
+    } on TimeoutException {
+      throw Exception("Request timeout");
     }
+  }
+
+  static dynamic _handle(http.Response response) {
+    if (response.body.isEmpty) return null;
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return decoded;
+    }
+
+    final message = decoded is Map && decoded["message"] != null
+        ? decoded["message"]
+        : response.body;
+
+    throw Exception("Error ${response.statusCode}: $message");
   }
 }

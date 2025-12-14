@@ -17,7 +17,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
   String username = "Loading...";
-  final UserService api = UserService(); 
 
   @override
   void initState() {
@@ -32,7 +31,7 @@ class _HomePageState extends State<HomePage> {
     if (storedUsername != null && storedUsername.isNotEmpty) {
       username = storedUsername;
     } else {
-      username = await api.getUserName();
+      username = await UserService.getUserName();
     }
     setState(() {});
   }

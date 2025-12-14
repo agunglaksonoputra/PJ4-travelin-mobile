@@ -32,7 +32,9 @@ class _ActualPageState extends State<ActualPage> {
 
       setState(() {
         // ambil field brand
-        vehicleList = vehicles.map<String>((v) => v["brand"].toString()).toList();
+        vehicleList = vehicles
+          .map<String>((v) => "${v["brand"]} ${v["model"]} ${v["plate_number"]}")
+          .toList();
 
         selectedVehicle =
             vehicleList.isNotEmpty ? vehicleList.first : "";
@@ -47,6 +49,7 @@ class _ActualPageState extends State<ActualPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F3F3),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(

@@ -1,17 +1,28 @@
-import 'package:travelin/services/api_services.dart';
+import '../config/api_config.dart';
+import 'api_services.dart';
 
 class UserService {
-  // Ambil username user
-  Future<String> getUserName() async {
+  // API version khusus user
+  static final String _baseUrl =
+  ApiConfig.baseUrl(ApiVersion.v1);
+
+  /// Get current user profile
+  static Future<String> getUserName() async {
     try {
-      final response = await ApiServices.get("users/profile");
-      if (response["data"] != null && response["data"]["username"] != null) {
-        return response["data"]["username"];
+      final response = await ApiServices.get(
+        _baseUrl,
+        "users/profile",
+      );
+
+      final data = response["data"];
+
+      if (data != null && data["username"] != null) {
+        return data["username"] as String;
       }
-      return "Unknown User";
+
+      throw Exception("Username not found in response");
     } catch (e) {
-      print("Error fetching user: $e");
-      return "Unknown User";
+      throw Exception("Failed to fetch user profile: $e");
     }
   }
 }

@@ -1,23 +1,37 @@
-import 'package:travelin/services/api_services.dart';
+import '../config/api_config.dart';
+import 'api_services.dart';
 
 class BookingService {
-  // Buat booking baru
-  static Future<dynamic> create(Map<String, dynamic> data) async {
+  // API version khusus booking
+  static final String _baseUrl =
+  ApiConfig.baseUrl(ApiVersion.v1);
+
+  /// Create new booking
+  static Future<dynamic> createBooking(
+      Map<String, dynamic> payload,
+      ) async {
     try {
-      return await ApiServices.post("booking", data);
+      return await ApiServices.post(
+        _baseUrl,
+        "booking",
+        payload,
+      );
     } catch (e) {
-      print("Error creating booking: $e");
-      return null;
+      throw Exception("Failed to create booking: $e");
     }
   }
 
-  // Ambil booking berdasarkan userId
-  static Future<dynamic> getByUser(String userId) async {
+  /// Get bookings by user ID
+  static Future<dynamic> getBookingsByUser(
+      String userId,
+      ) async {
     try {
-      return await ApiServices.get("booking/user/$userId");
+      return await ApiServices.get(
+        _baseUrl,
+        "booking/user/$userId",
+      );
     } catch (e) {
-      print("Error fetching booking for user $userId: $e");
-      return null;
+      throw Exception("Failed to fetch bookings for user $userId: $e");
     }
   }
 }
