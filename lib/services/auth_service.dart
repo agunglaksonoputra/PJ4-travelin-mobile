@@ -9,19 +9,16 @@ class AuthService {
   static final String baseUrl = ApiConfig.baseUrl(ApiVersion.v1);
 
   // LOGIN
-  Future<UserModel?> login(String email, String password) async {
+  Future<UserModel?> login(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'username': email,
+          'username': username,
           'password': password,
         }),
       );
-
-      // AppLogger.d('Login response status: ${response.statusCode}');
-      // AppLogger.d('Login response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final resp = jsonDecode(response.body);
@@ -34,7 +31,7 @@ class AuthService {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString("token", token);
 
-          AppLogger.i('Login success for $email');
+          AppLogger.i('Login success for $username');
 
           return UserModel.fromJson(userData);
         } else {

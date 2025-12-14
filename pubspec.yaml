@@ -17,6 +17,7 @@ dependencies:
   flutter_dotenv: ^6.0.0
   logger: ^2.6.2
   font_awesome_flutter: ^10.9.1
+  another_flushbar: ^1.12.32
 
 dev_dependencies:
   flutter_test:
