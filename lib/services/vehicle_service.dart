@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../config/api_config.dart';
+
 class VehicleService {
-  // GANTI IP INI
-  static const String baseUrl = "http://192.168.1.10:3000/api/v1";
+  static final String baseUrl = ApiConfig.baseUrl(ApiVersion.v1);
 
   static Future<List<dynamic>> getVehicles() async {
     final url = Uri.parse("$baseUrl/vehicles");
