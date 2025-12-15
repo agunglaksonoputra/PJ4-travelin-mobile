@@ -1,19 +1,142 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
+import '../models/payment_models.dart';
+import '../utils/app_logger.dart';
+import 'api_services.dart';
 
 class PaymentService {
-  static const String baseUrl = "http://localhost:3000/api/v1";
+  PaymentService._();
 
-  static Future<List<dynamic>> getPaymentsByVehicleId(int vehicleId) async {
-    final url = Uri.parse("$baseUrl/payments/vehicle/$vehicleId");
+  static final String _baseUrl = ApiConfig.baseUrl(ApiVersion.v1);
+  static const String _resource = 'transactions/payments';
 
-    final response = await http.get(url);
+  static Future<List<PaymentModel>> getPaymentsByVehicleId(
+    int vehicleId,
+  ) async {
+    AppLogger.i('Fetching payments for vehicleId $vehicleId');
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data["data"]; // sesuaikan format API backend kamu
-    } else {
-      throw Exception("Failed to load payments");
+    try {
+      final response = await ApiServices.get(
+        _baseUrl,
+        '$_resource/vehicle/$vehicleId',
+      );
+
+      AppLogger.d('Payment list response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+
+      final data = payload['data'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(PaymentModel.fromJson)
+            .toList();
+      }
+
+      throw Exception('Invalid response format: expected list in data field');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to fetch payments by vehicle',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
     }
+  }
+
+  static Future<PaymentModel> getPaymentById(int paymentId) async {
+    AppLogger.i('Fetching payment detail for id $paymentId');
+
+    try {
+      final response = await ApiServices.get(_baseUrl, '$_resource/$paymentId');
+
+      AppLogger.d('Payment detail response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+
+      final data = payload['data'];
+      if (data is Map<String, dynamic>) {
+        return PaymentModel.fromJson(data);
+      }
+
+      throw Exception('Invalid response format: expected object in data field');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to fetch payment detail',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  static Future<PaymentModel> createPayment({
+    required int transactionId,
+    required double amount,
+    required String method,
+    String? note,
+  }) async {
+    AppLogger.i('Creating payment for transaction $transactionId');
+
+    try {
+      final response = await ApiServices.post(_baseUrl, _resource, {
+        'transaction_id': transactionId,
+        'amount': amount,
+        'method': method,
+        if (note != null && note.isNotEmpty) 'note': note,
+      });
+
+      AppLogger.d('Create payment response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+
+      final data = payload['data'];
+      if (data is Map<String, dynamic>) {
+        return PaymentModel.fromJson(data);
+      }
+
+      throw Exception('Invalid response format: expected object in data field');
+    } catch (e, stackTrace) {
+      AppLogger.e('Failed to create payment', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  static Future<void> deletePayment(int paymentId) async {
+    AppLogger.i('Deleting payment id $paymentId');
+
+    try {
+      final response = await ApiServices.delete(
+        _baseUrl,
+        '$_resource/$paymentId',
+      );
+
+      AppLogger.d('Delete payment response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+    } catch (e, stackTrace) {
+      AppLogger.e('Failed to delete payment', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  static Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    throw Exception('Invalid response format: expected JSON object');
+  }
+
+  static void _ensureSuccess(Map<String, dynamic> payload) {
+    final success = payload['success'];
+    if (success == null || success == true) {
+      return;
+    }
+
+    final message = payload['message'] ?? payload['error'] ?? 'Request failed';
+    throw Exception(message.toString());
   }
 }

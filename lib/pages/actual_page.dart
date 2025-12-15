@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:travelin/widgets/trip_card.dart';
+import '../models/vehicle_models.dart';
 import '../services/vehicle_service.dart';
 import '../widgets/bottom_navbar.dart';
 
@@ -28,19 +29,16 @@ class _ActualPageState extends State<ActualPage> {
   // ===============================
   Future<void> loadVehicles() async {
     try {
-      final List vehicles = await VehicleService.getVehicles();
+      final List<VehicleModel> vehicles = await VehicleService.getVehicles();
 
       setState(() {
-        // ambil field brand
-        vehicleList = vehicles
-          .map<String>((v) => "${v["brand"]} ${v["model"]} ${v["plate_number"]}")
-          .toList();
+        vehicleList =
+            vehicles.map<String>((vehicle) => _vehicleLabel(vehicle)).toList();
 
-        selectedVehicle =
-            vehicleList.isNotEmpty ? vehicleList.first : "";
+        selectedVehicle = vehicleList.isNotEmpty ? vehicleList.first : "";
       });
     } catch (e) {
-      print("Error load vehicle: $e");
+      debugPrint("Error load vehicle: $e");
     }
   }
 
@@ -78,8 +76,9 @@ class _ActualPageState extends State<ActualPage> {
                     trip: 15,
                     amount: "10.000.000",
                     icon: FontAwesomeIcons.moneyBillWave,
-                    onTap: () =>
-                        Navigator.pushNamed(context, '/OnPayment_progress'),
+                    onTap:
+                        () =>
+                            Navigator.pushNamed(context, '/OnPayment_progress'),
                   ),
                   TripCard(
                     title: "On Progress of Report",
@@ -148,7 +147,11 @@ class _ActualPageState extends State<ActualPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(FontAwesomeIcons.bus, color: Colors.black87, size: 20),
+                    const Icon(
+                      FontAwesomeIcons.bus,
+                      color: Colors.black87,
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Text(
                       selectedVehicle.isNotEmpty
@@ -186,42 +189,54 @@ class _ActualPageState extends State<ActualPage> {
               ],
             ),
             child: Column(
-              children: vehicleList.map((vehicle) {
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      selectedVehicle = vehicle;
-                      isDropdownOpen = false;
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 10,
-                      horizontal: 16,
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.directions_bus, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          vehicle,
-                          style: TextStyle(
-                            color: vehicle == selectedVehicle
-                                ? Colors.blue
-                                : Colors.black87,
-                            fontWeight: vehicle == selectedVehicle
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
+              children:
+                  vehicleList.map((vehicle) {
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          selectedVehicle = vehicle;
+                          isDropdownOpen = false;
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 16,
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.directions_bus, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              vehicle,
+                              style: TextStyle(
+                                color:
+                                    vehicle == selectedVehicle
+                                        ? Colors.blue
+                                        : Colors.black87,
+                                fontWeight:
+                                    vehicle == selectedVehicle
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
             ),
           ),
       ],
     );
+  }
+
+  String _vehicleLabel(VehicleModel vehicle) {
+    final parts = [
+      if (vehicle.brand != null && vehicle.brand!.isNotEmpty) vehicle.brand!,
+      if (vehicle.model != null && vehicle.model!.isNotEmpty) vehicle.model!,
+      vehicle.plateNumber,
+    ];
+    return parts.join(' ').trim();
   }
 }

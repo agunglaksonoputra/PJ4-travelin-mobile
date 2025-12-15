@@ -10,8 +10,8 @@ import 'pages/signup_page.dart';
 import 'pages/homepage.dart';
 import 'pages/actual_page.dart';
 import 'pages/report_page.dart';
-import 'pages/OnPaymen_page.dart';
-import 'pages/OnPlaning_page.dart';
+import 'pages/OnPayment_page.dart';
+import 'pages/OnPlanning_page.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
         '/reservation': (context) => const ReservationPage(),
         '/OnPlanning': (context) => const OnPlanningPage(),
         '/OnPayment_progress': (context) => const OnPaymentPage(),
-        '/OnReport' : (context) => const OnReportPage(),
+        '/OnReport': (context) => const OnReportPage(),
         '/report_progress': (context) => const ReportPage(),
         '/admin': (context) => const AdminPage(),
         '/admin/users': (context) => const UserMasterPage(),
