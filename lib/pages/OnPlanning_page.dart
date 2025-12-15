@@ -32,6 +32,31 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
 
   final TextEditingController _dateController = TextEditingController();
 
+  double? _parseCurrencyToDouble(String? raw) {
+    if (raw == null) return null;
+    var s = raw.trim();
+    if (s.isEmpty) return null;
+    s = s.replaceAll(RegExp(r"[\sRp]", caseSensitive: false), "");
+    if (s.contains('.') && s.contains(',')) {
+      s = s.replaceAll('.', '').replaceAll(',', '.');
+    } else {
+      final parts = s.split('.');
+      if (parts.length > 2) {
+        s = parts.join('');
+      }
+      s = s.replaceAll(',', '.');
+    }
+    s = s.replaceAll(RegExp(r"[^0-9.]"), "");
+    if (s.isEmpty || s == '.') return null;
+    try {
+      final value = double.parse(s);
+      if (value <= 0) return null;
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -310,6 +335,8 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
                       ? null
                       : () async {
                         await _showPaymentDialog(context, transaction);
+                        // Refresh planning list after payment recorded
+                        await _loadTransactions();
                       },
               child: Text(
                 hasAnyPayment ? 'PAYMENT RECORDED' : 'PAYMENT',
@@ -661,14 +688,9 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
                                           final amountText =
                                               amountController.text.trim();
                                           final parsedAmount =
-                                              amountText.isEmpty
-                                                  ? 0.0
-                                                  : double.tryParse(
-                                                    amountText.replaceAll(
-                                                      ',',
-                                                      '',
-                                                    ),
-                                                  );
+                                              _parseCurrencyToDouble(
+                                                amountText,
+                                              );
 
                                           String? amountValidation;
                                           String? methodValidation;
@@ -681,11 +703,12 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
                                           if (parsedAmount == null) {
                                             amountValidation =
                                                 'Nominal tidak valid';
-                                          } else if (parsedAmount < 0) {
+                                          } else if (parsedAmount <= 0) {
                                             amountValidation =
                                                 'Nominal tidak boleh negatif';
                                           } else if (method == 'credit' &&
-                                              parsedAmount > remainingBalance) {
+                                              (parsedAmount ?? 0) >
+                                                  remainingBalance) {
                                             final double allowed =
                                                 remainingBalance;
                                             amountValidation =

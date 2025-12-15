@@ -238,16 +238,18 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     return ListView.separated(
       itemCount: _paymentGroups.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) => _buildPaymentCard(_paymentGroups[index]),
+      itemBuilder:
+          (context, index) => _buildPaymentCard(_paymentGroups[index], index),
     );
   }
 
-  Widget _buildPaymentCard(_VehiclePaymentGroup group) {
+  Widget _buildPaymentCard(_VehiclePaymentGroup group, int index) {
     final summary = group.transaction;
-    final title =
+    final tripLabel =
         summary?.tripCode?.isNotEmpty == true
-            ? 'Trip ${summary!.tripCode}'
-            : 'Transaksi #${group.transactionId}';
+            ? summary!.tripCode
+            : '#${group.transactionId}';
+    final title = 'Trip #${index + 1} - $tripLabel';
     final customerName =
         summary?.customerName?.isNotEmpty == true ? summary!.customerName : '-';
     final totalCost = summary?.totalCost;
@@ -282,11 +284,6 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
             'Customer: $customerName',
             style: const TextStyle(color: Colors.black87),
           ),
-          if (summary?.status != null)
-            Text(
-              'Status: ${summary!.status}',
-              style: const TextStyle(color: Colors.black54),
-            ),
           const Divider(height: 20, thickness: 1, color: Colors.black12),
           if (totalCost != null) Text('Total: ${_formatCurrency(totalCost)}'),
           Text('Dibayar: ${_formatCurrency(totalPaid)}'),
@@ -647,6 +644,8 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     bool isSubmitting = false;
     bool isFormattingAmount = false;
 
+    bool dialogClosed = false;
+
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -677,6 +676,8 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
                 );
 
                 if (!mounted) return;
+                dialogClosed =
+                    true; // Prevent setState after the dialog is popped
                 Navigator.of(context).pop();
                 _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
                 final selectedVehicle = _selectedVehicle;
@@ -687,7 +688,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
                 if (!mounted) return;
                 _showErrorFlushbar(e.toString());
               } finally {
-                if (context.mounted) {
+                if (!dialogClosed && context.mounted) {
                   setModalState(() => isSubmitting = false);
                 }
               }

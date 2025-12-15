@@ -74,7 +74,16 @@ class _OnReportPageState extends State<OnReportPage> {
     });
 
     try {
-      final txs = await BookingService.getTransactionsByVehicle(vehicleId);
+      final allTxs = await BookingService.getTransactionsByVehicle(vehicleId);
+
+      // Filter only transactions with 'reporting' status
+      final txs =
+          (allTxs as List)
+              .where(
+                (t) =>
+                    t is Map && (t['status'] ?? '').toString() == 'reporting',
+              )
+              .toList();
 
       double totalPayment = 0;
       DateTime? latestDate;
@@ -152,11 +161,21 @@ class _OnReportPageState extends State<OnReportPage> {
               },
             ),
             const SizedBox(height: 20),
+            if (transactions.isNotEmpty) _buildSummaryCard(),
+            const SizedBox(height: 16),
             Expanded(
-              child: ListView.builder(
-                itemCount: 1 + transactions.length,
-                itemBuilder: (c, i) => _buildReportCard(c, i),
-              ),
+              child:
+                  transactions.isEmpty
+                      ? Center(
+                        child: Text(
+                          'Tidak ada transaksi dengan status reporting',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      )
+                      : ListView.builder(
+                        itemCount: transactions.length - 1,
+                        itemBuilder: (c, i) => _buildTransactionCard(c, i + 1),
+                      ),
             ),
           ],
         ),
@@ -168,6 +187,157 @@ class _OnReportPageState extends State<OnReportPage> {
           if (i == 1) Navigator.pushReplacementNamed(context, '/actual');
           if (i == 2) Navigator.pushReplacementNamed(context, '/report');
         },
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    final summaryTripCode =
+        transactions.isNotEmpty && transactions.first is Map
+            ? (() {
+              final first = transactions.first as Map;
+              final code = first['trip_code'] ?? first['tripCode'];
+              return code?.toString();
+            })()
+            : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Report ${summaryTripCode?.isNotEmpty == true ? summaryTripCode : 'Summary'}",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: Colors.black12),
+          const SizedBox(height: 8),
+          Text(
+            "Customer: ${summaryCustomer.isNotEmpty ? summaryCustomer : '—'}",
+          ),
+          Text("Total Trip: $summaryTotalTrips"),
+          Text(
+            "Total Payment: Rp ${NumberFormat.currency(locale: 'id', symbol: '', decimalDigits: 0).format(summaryTotalPayment)}",
+          ),
+          Text("Date: ${summaryDate.isNotEmpty ? summaryDate : '-'}"),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: () {
+                _showTripReportDialog(context);
+              },
+              child: const Text(
+                "TRIP REPORT",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionCard(BuildContext context, int index) {
+    final tx = transactions[index];
+    final customer =
+        (tx is Map && tx['customer_name'] != null)
+            ? tx['customer_name'].toString()
+            : '—';
+    final tripCode =
+        (tx is Map && (tx['trip_code'] ?? tx['tripCode']) != null)
+            ? (tx['trip_code'] ?? tx['tripCode']).toString()
+            : null;
+    final totalPayment =
+        (tx is Map && tx['total_cost'] != null)
+            ? double.tryParse(tx['total_cost'].toString()) ?? 0.0
+            : 0.0;
+    final dateStr =
+        (tx is Map && (tx['start_date'] ?? tx['created_at']) != null)
+            ? (() {
+              try {
+                return DateFormat('dd/MM/yyyy').format(
+                  DateTime.parse(
+                    (tx['start_date'] ?? tx['created_at']).toString(),
+                  ),
+                );
+              } catch (_) {
+                return '-';
+              }
+            })()
+            : '-';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Report ${tripCode?.isNotEmpty == true ? tripCode : '#${index + 1}'}",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: Colors.black12),
+          const SizedBox(height: 8),
+          Text("Customer: $customer"),
+          const Text("Total Trip: 1"),
+          Text(
+            "Total Payment: Rp ${NumberFormat.currency(locale: 'id', symbol: '', decimalDigits: 0).format(totalPayment)}",
+          ),
+          Text("Date: $dateStr"),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: () {
+                _showTripReportDialog(context);
+              },
+              child: const Text(
+                "TRIP REPORT",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
