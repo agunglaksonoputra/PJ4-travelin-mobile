@@ -18,7 +18,7 @@ class _UserMasterPageState extends State<UserMasterPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          "Vehicle Master",
+          "User Management",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
         leading: IconButton(

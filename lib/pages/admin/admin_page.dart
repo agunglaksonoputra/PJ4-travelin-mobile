@@ -36,7 +36,7 @@ class _AdminPageState extends State<AdminPage> {
                   title: "User Management",
                   subtitle: "Kelola data pengguna",
                   onTap: () {
-                    // Navigator.pushNamed(context, '/admin/users');
+                    Navigator.pushNamed(context, '/admin/users');
                   },
                 ),
                 const SizedBox(height: 10),
