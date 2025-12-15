@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/vehicle_models.dart';
+import '../utils/currency_input_utils.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/vehicle_dropdown.dart';
 import 'package:travelin/services/bookings_service.dart';
 import 'package:travelin/services/report_service.dart';
-import 'package:travelin/services/vehicle_service.dart';
 
 class OnReportPage extends StatefulWidget {
   const OnReportPage({super.key});
@@ -14,11 +15,7 @@ class OnReportPage extends StatefulWidget {
 }
 
 class _OnReportPageState extends State<OnReportPage> {
-  bool isDropdownOpen = false;
-  bool _isLoadingVehicles = false;
-  String? _vehicleError;
   VehicleModel? _selectedVehicle;
-  List<VehicleModel> _vehicles = [];
 
   List<dynamic> transactions = [];
   bool isLoadingTransactions = false;
@@ -38,10 +35,19 @@ class _OnReportPageState extends State<OnReportPage> {
   final TextEditingController destinationController = TextEditingController();
   final TextEditingController othersController = TextEditingController();
 
+  bool _isFormattingDriverFee = false;
+  bool _isFormattingGasoline = false;
+  bool _isFormattingOthers = false;
+
+  final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
+
   @override
   void initState() {
     super.initState();
-    _loadVehicles();
   }
 
   @override
@@ -54,43 +60,6 @@ class _OnReportPageState extends State<OnReportPage> {
     destinationController.dispose();
     othersController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadVehicles() async {
-    setState(() {
-      _isLoadingVehicles = true;
-      _vehicleError = null;
-    });
-
-    try {
-      final vehicles = await VehicleService.getVehicles();
-      final selected = vehicles.isNotEmpty ? vehicles.first : null;
-
-      if (!mounted) return;
-      setState(() {
-        _vehicles = vehicles;
-        _selectedVehicle = selected;
-        _isLoadingVehicles = false;
-      });
-
-      if (selected != null) {
-        await _loadTransactionsForVehicle(selected.id);
-      } else {
-        setState(() {
-          transactions = [];
-          summaryCustomer = '';
-          summaryTotalTrips = 0;
-          summaryTotalPayment = 0;
-          summaryDate = '';
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoadingVehicles = false;
-        _vehicleError = e.toString();
-      });
-    }
   }
 
   Future<void> _loadTransactionsForVehicle(int vehicleId) async {
@@ -153,15 +122,6 @@ class _OnReportPageState extends State<OnReportPage> {
     }
   }
 
-  String _vehicleLabel(VehicleModel vehicle) {
-    final parts = [
-      if (vehicle.brand != null && vehicle.brand!.isNotEmpty) vehicle.brand!,
-      if (vehicle.model != null && vehicle.model!.isNotEmpty) vehicle.model!,
-      vehicle.plateNumber,
-    ];
-    return parts.join(' ').trim();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -181,7 +141,16 @@ class _OnReportPageState extends State<OnReportPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildVehicleDropdown(),
+            VehicleDropdown(
+              showLabel: false,
+              initialVehicle: _selectedVehicle,
+              onChanged: (vehicle) {
+                setState(() {
+                  _selectedVehicle = vehicle;
+                });
+                _loadTransactionsForVehicle(vehicle.id);
+              },
+            ),
             const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
@@ -203,178 +172,18 @@ class _OnReportPageState extends State<OnReportPage> {
     );
   }
 
-  // =========================
-  // DROPDOWN (ONLY THIS PART CHANGED)
-  // =========================
-  Widget _buildVehicleDropdown() {
-    if (_isLoadingVehicles) {
-      return Container(
-        height: 56,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const CircularProgressIndicator(),
-      );
-    }
-
-    if (_vehicleError != null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.redAccent),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _vehicleError!,
-                style: const TextStyle(color: Colors.redAccent),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => isDropdownOpen = !isDropdownOpen),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.directions_bus, color: Colors.black),
-                    const SizedBox(width: 8),
-                    Text(
-                      _selectedVehicle != null
-                          ? _vehicleLabel(_selectedVehicle!)
-                          : 'Pilih kendaraan',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-                Icon(
-                  isDropdownOpen
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  color: Colors.black,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (isDropdownOpen)
-          Container(
-            margin: const EdgeInsets.only(top: 6),
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 6,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child:
-                _vehicles.isEmpty
-                    ? const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('Tidak ada kendaraan'),
-                    )
-                    : Column(
-                      children:
-                          _vehicles.map((vehicle) {
-                            final isSelected =
-                                vehicle.id == _selectedVehicle?.id;
-                            return InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _selectedVehicle = vehicle;
-                                  isDropdownOpen = false;
-                                });
-                                _loadTransactionsForVehicle(vehicle.id);
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                  horizontal: 16,
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.directions_bus,
-                                      color: Colors.black54,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _vehicleLabel(vehicle),
-                                      style: TextStyle(
-                                        color:
-                                            isSelected
-                                                ? Colors.blue
-                                                : Colors.black87,
-                                        fontWeight:
-                                            isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                    ),
-          ),
-      ],
-    );
-  }
-
   Widget _buildReportCard(BuildContext context, int index) {
     // index 0 = summary card
     if (index == 0) {
+      final summaryTripCode =
+          transactions.isNotEmpty && transactions.first is Map
+              ? (() {
+                final first = transactions.first as Map;
+                final code = first['trip_code'] ?? first['tripCode'];
+                return code?.toString();
+              })()
+              : null;
+
       return Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
@@ -393,7 +202,7 @@ class _OnReportPageState extends State<OnReportPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Report Summary",
+              "Report ${summaryTripCode?.isNotEmpty == true ? summaryTripCode : 'Summary'}",
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
             const SizedBox(height: 8),
@@ -442,6 +251,10 @@ class _OnReportPageState extends State<OnReportPage> {
         (tx is Map && tx['customer_name'] != null)
             ? tx['customer_name'].toString()
             : '—';
+    final tripCode =
+        (tx is Map && (tx['trip_code'] ?? tx['tripCode']) != null)
+            ? (tx['trip_code'] ?? tx['tripCode']).toString()
+            : null;
     final totalPayment =
         (tx is Map && tx['total_cost'] != null)
             ? double.tryParse(tx['total_cost'].toString()) ?? 0.0
@@ -475,7 +288,7 @@ class _OnReportPageState extends State<OnReportPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Report #${index}",
+            "Report ${tripCode?.isNotEmpty == true ? tripCode : '#$index'}",
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
           const SizedBox(height: 8),
@@ -560,11 +373,89 @@ class _OnReportPageState extends State<OnReportPage> {
                     "Driver Fee",
                     "Input Total",
                     driverFeeController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (value) {
+                      if (_isFormattingDriverFee) return;
+
+                      final result = formatCurrencyInput(
+                        value,
+                        _currencyFormat,
+                      );
+
+                      if (!result.shouldUpdateText) return;
+
+                      _isFormattingDriverFee = true;
+
+                      if (result.shouldClear) {
+                        driverFeeController.clear();
+                      } else if (result.isOverride &&
+                          result.formattedValue != null) {
+                        final currentOffset =
+                            driverFeeController.selection.baseOffset;
+                        final oldLength = driverFeeController.text.length;
+                        final newText = result.formattedValue!;
+                        final newLength = newText.length;
+                        final diff = newLength - oldLength;
+                        final newOffset = (currentOffset + diff).clamp(
+                          0,
+                          newLength,
+                        );
+
+                        driverFeeController
+                            .value = driverFeeController.value.copyWith(
+                          text: newText,
+                          selection: TextSelection.collapsed(offset: newOffset),
+                        );
+                      }
+
+                      _isFormattingDriverFee = false;
+                    },
                   ),
                   _buildInputField(
                     "Gasoline",
                     "Input Amount",
                     gasolineController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (value) {
+                      if (_isFormattingGasoline) return;
+
+                      final result = formatCurrencyInput(
+                        value,
+                        _currencyFormat,
+                      );
+
+                      if (!result.shouldUpdateText) return;
+
+                      _isFormattingGasoline = true;
+
+                      if (result.shouldClear) {
+                        gasolineController.clear();
+                      } else if (result.isOverride &&
+                          result.formattedValue != null) {
+                        final currentOffset =
+                            gasolineController.selection.baseOffset;
+                        final oldLength = gasolineController.text.length;
+                        final newText = result.formattedValue!;
+                        final newLength = newText.length;
+                        final diff = newLength - oldLength;
+                        final newOffset = (currentOffset + diff).clamp(
+                          0,
+                          newLength,
+                        );
+
+                        gasolineController
+                            .value = gasolineController.value.copyWith(
+                          text: newText,
+                          selection: TextSelection.collapsed(offset: newOffset),
+                        );
+                      }
+
+                      _isFormattingGasoline = false;
+                    },
                   ),
                   _buildInputField(
                     "Destination / Notes",
@@ -575,6 +466,45 @@ class _OnReportPageState extends State<OnReportPage> {
                     "Others (misc)",
                     "Lainnya...",
                     othersController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (value) {
+                      if (_isFormattingOthers) return;
+
+                      final result = formatCurrencyInput(
+                        value,
+                        _currencyFormat,
+                      );
+
+                      if (!result.shouldUpdateText) return;
+
+                      _isFormattingOthers = true;
+
+                      if (result.shouldClear) {
+                        othersController.clear();
+                      } else if (result.isOverride &&
+                          result.formattedValue != null) {
+                        final currentOffset =
+                            othersController.selection.baseOffset;
+                        final oldLength = othersController.text.length;
+                        final newText = result.formattedValue!;
+                        final newLength = newText.length;
+                        final diff = newLength - oldLength;
+                        final newOffset = (currentOffset + diff).clamp(
+                          0,
+                          newLength,
+                        );
+
+                        othersController
+                            .value = othersController.value.copyWith(
+                          text: newText,
+                          selection: TextSelection.collapsed(offset: newOffset),
+                        );
+                      }
+
+                      _isFormattingOthers = false;
+                    },
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
@@ -598,8 +528,10 @@ class _OnReportPageState extends State<OnReportPage> {
   Widget _buildInputField(
     String label,
     String hint,
-    TextEditingController controller,
-  ) {
+    TextEditingController controller, {
+    void Function(String)? onChanged,
+    TextInputType? keyboardType,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -609,6 +541,8 @@ class _OnReportPageState extends State<OnReportPage> {
           const SizedBox(height: 6),
           TextField(
             controller: controller,
+            keyboardType: keyboardType,
+            onChanged: onChanged,
             decoration: InputDecoration(
               hintText: hint,
               filled: true,
@@ -645,9 +579,23 @@ class _OnReportPageState extends State<OnReportPage> {
 
     final kmStart = int.tryParse(kmStartController.text.trim());
     final kmEnd = int.tryParse(kmEndController.text.trim());
-    final driverFee = double.tryParse(driverFeeController.text.trim()) ?? 0;
-    final gasolineCost = double.tryParse(gasolineController.text.trim()) ?? 0;
-    final miscCost = double.tryParse(othersController.text.trim()) ?? 0;
+
+    final driverFeeDigits = driverFeeController.text.trim().replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+    final gasolineDigits = gasolineController.text.trim().replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+    final miscDigits = othersController.text.trim().replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+
+    final driverFee = double.tryParse(driverFeeDigits) ?? 0;
+    final gasolineCost = double.tryParse(gasolineDigits) ?? 0;
+    final miscCost = double.tryParse(miscDigits) ?? 0;
     final totalOperational = driverFee + gasolineCost + miscCost;
 
     if (!mounted) return;
