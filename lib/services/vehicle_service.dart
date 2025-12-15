@@ -51,4 +51,42 @@ class VehicleService {
 
     throw Exception('Invalid vehicle data format');
   }
+
+  static Future<VehicleModel> createVehicle(
+      Map<String, dynamic> payload,
+      ) async {
+    AppLogger.i('Creating new vehicle');
+    AppLogger.d('Create vehicle payload: $payload');
+
+    try {
+      final response = await ApiServices.post(
+        _baseUrl,
+        'vehicles',
+        payload,
+      );
+
+      AppLogger.d('Create vehicle response: $response');
+
+      final data = response['data'];
+
+      if (data is! Map<String, dynamic>) {
+        throw Exception('Invalid vehicle response format');
+      }
+
+      final vehicle = VehicleModel.fromJson(data);
+
+      AppLogger.i('Vehicle created successfully (id: ${vehicle.id})');
+      return vehicle;
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to create vehicle',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
 }
+
+

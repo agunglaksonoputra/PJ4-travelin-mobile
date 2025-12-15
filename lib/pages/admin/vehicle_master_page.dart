@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:travelin/widgets/custom_input_field.dart';
+import 'package:travelin/widgets/vehicle_detail_row.dart';
 
 import '../../models/vehicle_models.dart';
 import '../../services/vehicle_service.dart';
+import '../../widgets/custom_flushbar.dart';
+import '../../widgets/status_picker_bottom_sheet.dart';
 
 class VehicleMasterPage extends StatefulWidget {
   const VehicleMasterPage({super.key});
@@ -120,15 +123,23 @@ class _VehicleMasterPageState extends State<VehicleMasterPage> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              _detailRow("Brand", vehicle.brand),
-              _detailRow("Model", vehicle.model),
-              _detailRow("Plate Nomor", vehicle.plateNumber),
-              _detailRow("Tahun", vehicle.manufactureYear),
-              _detailRow(
-                "Status",
-                vehicle.status == 'active' ? "Active" : "Inactive",
+              VehicleDetailRow(label: "Brand", value: vehicle.brand),
+              VehicleDetailRow(label: "Model", value: vehicle.model),
+              VehicleDetailRow(label: "Plate Nomor", value: vehicle.plateNumber),
+              VehicleDetailRow(label: "Tahun", value: vehicle.manufactureYear),
+              VehicleDetailRow(
+                label: "Status",
+                value: vehicle.status == 'active' ? "Active" : "Inactive"
               ),
-              _detailRow("Catatan", vehicle.notes),
+              // _detailRow("Brand", vehicle.brand),
+              // _detailRow("Model", vehicle.model),
+              // _detailRow("Plate Nomor", vehicle.plateNumber),
+              // _detailRow("Tahun", vehicle.manufactureYear),
+              // _detailRow(
+              //   "Status",
+              //   vehicle.status == 'active' ? "Active" : "Inactive",
+              // ),
+              // _detailRow("Catatan", vehicle.notes),
 
               const SizedBox(height: 20),
               Row(
@@ -180,27 +191,6 @@ class _VehicleMasterPageState extends State<VehicleMasterPage> {
           ),
         );
       },
-    );
-  }
-
-  Widget _detailRow(String label, dynamic value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: Text(value?.toString() ?? "-"),
-          ),
-        ],
-      ),
     );
   }
 
@@ -297,7 +287,8 @@ class _VehicleMasterPageState extends State<VehicleMasterPage> {
                     const SizedBox(height: 6),
                     GestureDetector(
                       onTap: () {
-                        _pickStatus(
+                        StatusPickerBottomSheet.show(
+                          context: context,
                           current: localStatus,
                           onSelected: (value) {
                             setModalState(() {
@@ -362,18 +353,50 @@ class _VehicleMasterPageState extends State<VehicleMasterPage> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
+                              if (plateController.text.isEmpty) {
+                                CustomFlushbar.show(
+                                  context,
+                                  message: "Plat nomor wajib diisi",
+                                  type: FlushbarType.warning,
+                                );
+                                return;
+                              }
+
                               final payload = {
                                 "plate_number": plateController.text,
                                 "brand": brandController.text,
                                 "model": modelController.text,
-                                "manufacture_year":
-                                int.tryParse(yearController.text),
+                                "manufacture_year": int.tryParse(yearController.text),
                                 "status": localStatus,
                                 "notes": notesController.text,
                               };
 
-                              Navigator.pop(context);
+                              try {
+                                final newVehicle = await VehicleService.createVehicle(payload);
+
+                                if (!mounted) return;
+
+                                setState(() {
+                                  _vehicles.insert(0, newVehicle);
+                                });
+
+                                Navigator.pop(context);
+
+                                CustomFlushbar.show(
+                                  context,
+                                  message: "Kendaraan berhasil ditambahkan",
+                                  type: FlushbarType.success,
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+
+                                CustomFlushbar.show(
+                                  context,
+                                  message: e.toString(),
+                                  type: FlushbarType.error,
+                                );
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
@@ -394,69 +417,6 @@ class _VehicleMasterPageState extends State<VehicleMasterPage> {
           },
         );
       },
-    );
-  }
-
-  void _pickStatus({
-    required String current,
-    required Function(String) onSelected,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _statusItem("Active", 'active', current, onSelected),
-                _statusItem("Inactive", 'inactive', current, onSelected),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _statusItem(
-      String label,
-      String value,
-      String current,
-      Function(String) onSelected,
-      ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          onSelected(value);
-          Navigator.pop(context);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-              if (current == value)
-                const Icon(Icons.check, color: Colors.blue),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
