@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/payment_models.dart';
 import '../models/vehicle_models.dart';
 import '../services/payment_service.dart';
@@ -16,6 +17,12 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
   List<VehicleModel> _vehicles = [];
   VehicleModel? _selectedVehicle;
   List<_VehiclePaymentGroup> _paymentGroups = [];
+
+  final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 2,
+  );
 
   bool _isDropdownOpen = false;
   bool _isLoadingVehicles = false;
@@ -280,7 +287,11 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
           const Divider(height: 20, thickness: 1, color: Colors.black12),
           if (totalCost != null) Text('Total: ${_formatCurrency(totalCost)}'),
           Text('Dibayar: ${_formatCurrency(totalPaid)}'),
-          if (remaining != null) Text('Sisa: ${_formatCurrency(remaining)}'),
+          if (remaining != null)
+            Text(
+              'Sisa Hutang: ${_formatCurrency(remaining)}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           Text('Pembayaran terakhir: $latestDate'),
           if (latest?.method != null)
             Text('Metode: ${latest!.method.toUpperCase()}'),
@@ -807,7 +818,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
 
   String _formatCurrency(double? amount) {
     if (amount == null) return '-';
-    return 'Rp ${amount.toStringAsFixed(0)}';
+    return _currencyFormat.format(amount);
   }
 
   String _formatDate(DateTime? date) {
@@ -844,9 +855,15 @@ class _VehiclePaymentGroup {
   final TransactionSummary? transaction;
 
   double get totalPaid =>
+      transaction?.paidAmount ??
       payments.fold(0, (sum, payment) => sum + payment.amount);
 
   double? get remainingAmount {
+    final outstanding = transaction?.outstandingAmount;
+    if (outstanding != null) {
+      return outstanding < 0 ? 0 : outstanding;
+    }
+
     final total = transaction?.totalCost;
     if (total == null) return null;
     final remaining = total - totalPaid;

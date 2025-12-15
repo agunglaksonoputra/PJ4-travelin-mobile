@@ -17,7 +17,7 @@ class PaymentService {
     try {
       final response = await ApiServices.get(
         _baseUrl,
-        '$_resource/vehicle/$vehicleId',
+        '$_resource/vehicle/$vehicleId?includeTransaction=true',
       );
 
       AppLogger.d('Payment list response: $response');
