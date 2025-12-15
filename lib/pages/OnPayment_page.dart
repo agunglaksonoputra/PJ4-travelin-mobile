@@ -5,6 +5,7 @@ import '../models/vehicle_models.dart';
 import '../services/payment_service.dart';
 import '../services/vehicle_service.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/custom_flushbar.dart';
 
 class OnPaymentPage extends StatefulWidget {
   const OnPaymentPage({super.key});
@@ -392,7 +393,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
         _selectedVehicle = null;
         _paymentGroups = [];
       });
-      _showErrorSnackBar(e.toString());
+      _showErrorFlushbar(e.toString());
     }
   }
 
@@ -417,7 +418,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
         _paymentsError = e.toString();
         _paymentGroups = [];
       });
-      _showErrorSnackBar(e.toString());
+      _showErrorFlushbar(e.toString());
     }
   }
 
@@ -647,7 +648,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
               final amount = double.tryParse(rawAmount);
 
               if (amount == null || amount <= 0) {
-                _showErrorSnackBar('Masukkan nominal pembayaran yang valid');
+                _showErrorFlushbar('Masukkan nominal pembayaran yang valid');
                 return;
               }
 
@@ -666,14 +667,14 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
 
                 if (!mounted) return;
                 Navigator.of(context).pop();
-                _showSuccessSnackBar('Pembayaran berhasil ditambahkan');
+                _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
                 final selectedVehicle = _selectedVehicle;
                 if (selectedVehicle != null) {
                   await _loadPayments(selectedVehicle.id);
                 }
               } catch (e) {
                 if (!mounted) return;
-                _showErrorSnackBar(e.toString());
+                _showErrorFlushbar(e.toString());
               } finally {
                 if (context.mounted) {
                   setModalState(() => isSubmitting = false);
@@ -830,16 +831,12 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     return '$day/$month/$year';
   }
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  void _showErrorFlushbar(String message) {
+    CustomFlushbar.show(context, message: message, type: FlushbarType.error);
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  void _showSuccessFlushbar(String message) {
+    CustomFlushbar.show(context, message: message, type: FlushbarType.success);
   }
 }
 

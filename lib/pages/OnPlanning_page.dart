@@ -5,6 +5,7 @@ import '../models/vehicle_models.dart';
 import '../services/transaction_service.dart';
 import '../services/vehicle_service.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/custom_flushbar.dart';
 
 class OnPlanningPage extends StatefulWidget {
   const OnPlanningPage({super.key});
@@ -396,7 +397,7 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
   }
 
   Widget _buildTripCard(
-    BuildContext context,
+    BuildContext _,
     TransactionModel transaction,
     int index,
   ) {
@@ -406,6 +407,8 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
             ? '${transaction.durationDays} hari'
             : '-';
     final totalText = _formatCurrency(transaction.totalCost);
+    final double paidAmount = transaction.paidAmount ?? 0;
+    final bool hasAnyPayment = paidAmount > 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -442,19 +445,22 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlue,
+                backgroundColor: hasAnyPayment ? Colors.grey : Colors.lightBlue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              onPressed: () {
-                _showPaymentDialog(context, transaction);
-              },
-              child: const Text(
-                "PAYMENT",
-                style: TextStyle(
+              onPressed:
+                  hasAnyPayment
+                      ? null
+                      : () {
+                        _showPaymentDialog(this.context, transaction);
+                      },
+              child: Text(
+                hasAnyPayment ? 'PAYMENT RECORDED' : 'PAYMENT',
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
@@ -816,14 +822,10 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
                                           await _loadTransactions();
 
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(
+                                          CustomFlushbar.show(
                                             context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Payment plan updated',
-                                              ),
-                                            ),
+                                            message: 'Payment plan updated',
+                                            type: FlushbarType.success,
                                           );
                                         } catch (error) {
                                           setDialogState(() {
@@ -831,12 +833,10 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
                                           });
 
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(
+                                          CustomFlushbar.show(
                                             context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(error.toString()),
-                                            ),
+                                            message: error.toString(),
+                                            type: FlushbarType.error,
                                           );
                                         }
                                       },
