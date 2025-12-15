@@ -35,6 +35,7 @@ class BottomNavBar extends StatelessWidget {
           _buildNavItem(FontAwesomeIcons.house, "Home", 0),
           _buildNavItem(FontAwesomeIcons.listCheck, "Actual", 1),
           _buildNavItem(FontAwesomeIcons.fileInvoice, "Report", 2),
+          _buildNavItem(FontAwesomeIcons.userGear, "Admin", 3),
         ],
       ),
     );

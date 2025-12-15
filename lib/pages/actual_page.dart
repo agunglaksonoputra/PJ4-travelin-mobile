@@ -113,6 +113,9 @@ class _ActualPageState extends State<ActualPage> {
             case 2:
               Navigator.pushReplacementNamed(context, '/report');
               break;
+            case 3:
+              Navigator.pushReplacementNamed(context, '/admin');
+              break;
           }
         },
       ),

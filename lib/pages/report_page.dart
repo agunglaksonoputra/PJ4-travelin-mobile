@@ -174,6 +174,7 @@ class ReportPage extends StatelessWidget {
         onTap: (i) {
           if (i == 0) Navigator.pushReplacementNamed(context, '/home');
           if (i == 1) Navigator.pushReplacementNamed(context, '/actual');
+          if (i == 3) Navigator.pushReplacementNamed(context, '/admin');
         },
       ),
     );
@@ -449,6 +450,7 @@ class ReportDetailPage extends StatelessWidget {
         onTap: (i) {
           if (i == 0) Navigator.pushReplacementNamed(context, '/home');
           if (i == 1) Navigator.pushReplacementNamed(context, '/actual');
+          if (i == 3) Navigator.pushReplacementNamed(context, '/report');
         },
       ),
     );

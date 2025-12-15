@@ -47,6 +47,9 @@ class _HomePageState extends State<HomePage> {
       case 2:
         Navigator.pushReplacementNamed(context, '/report');
         break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/admin');
+        break;
     }
   }
 
