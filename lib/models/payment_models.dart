@@ -54,6 +54,9 @@ class TransactionSummary {
     required this.customerName,
     required this.vehicleId,
     this.totalCost,
+    this.paymentPlanMethod,
+    this.paidAmount,
+    this.outstandingAmount,
     this.status,
   });
 
@@ -62,6 +65,9 @@ class TransactionSummary {
   final String customerName;
   final int vehicleId;
   final double? totalCost;
+  final String? paymentPlanMethod;
+  final double? paidAmount;
+  final double? outstandingAmount;
   final String? status;
 
   factory TransactionSummary.fromJson(Map<String, dynamic> json) {
@@ -74,6 +80,15 @@ class TransactionSummary {
           json.containsKey('total_cost')
               ? _parseDouble(json['total_cost'])
               : null,
+      paymentPlanMethod: json['payment_plan_method']?.toString(),
+      paidAmount:
+          json.containsKey('paid_amount')
+              ? _parseDouble(json['paid_amount'])
+              : null,
+      outstandingAmount:
+          json.containsKey('outstanding_amount')
+              ? _parseDouble(json['outstanding_amount'])
+              : null,
       status: json['status']?.toString(),
     );
   }
@@ -85,6 +100,9 @@ class TransactionSummary {
       'customer_name': customerName,
       'vehicle_id': vehicleId,
       'total_cost': totalCost,
+      'payment_plan_method': paymentPlanMethod,
+      'paid_amount': paidAmount,
+      'outstanding_amount': outstandingAmount,
       'status': status,
     };
   }

@@ -26,7 +26,7 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
   final NumberFormat _currencyFormat = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp ',
-    decimalDigits: 0,
+    decimalDigits: 2,
   );
 
   final TextEditingController _dateController = TextEditingController();
@@ -467,215 +467,410 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
   }
 
   void _showPaymentDialog(BuildContext context, TransactionModel transaction) {
+    final double existingPaidAmount = transaction.paidAmount?.toDouble() ?? 0;
+    final double totalCost = transaction.totalCost?.toDouble() ?? 0;
+    final double remainingBalance =
+        totalCost > existingPaidAmount ? totalCost - existingPaidAmount : 0.0;
+    final amountController = TextEditingController(text: '');
+    String? selectedMethod = transaction.paymentPlanMethod;
+    String? amountError;
+    String? methodError;
+    bool isSubmitting = false;
+
+    _dateController.clear();
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              surface: Colors.white,
-              primary: Colors.black,
-            ),
-            dialogBackgroundColor: Colors.white,
-          ),
-          child: AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            contentPadding: const EdgeInsets.all(16),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Payment Details",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Trip: ${transaction.tripCode}',
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Customer: ${transaction.customerName}',
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Payment Amount
-                  const Text(
-                    "Payment Amount",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: "Input Total",
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Payment Method
-                  const Text(
-                    "Payment Method",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: "Select Payment Method",
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  const Text(
-                    "Payment Type",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: DropdownButtonFormField<String>(
-                      dropdownColor: Colors.white,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                      ),
-                      hint: const Text("Select Payment Type"),
-                      items: const [
-                        DropdownMenuItem(value: "Cash", child: Text("Cash")),
-                        DropdownMenuItem(
-                          value: "Transfer",
-                          child: Text("Transfer"),
-                        ),
-                      ],
-                      onChanged: (value) {},
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  const Text(
-                    "Date",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: _dateController,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      hintText: "Select Date",
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onTap: () async {
-                      DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          _dateController.text = DateFormat(
-                            'dd/MM/yyyy',
-                          ).format(picked);
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Note
-                  const Text(
-                    "Note",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: "Write notes here...",
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      builder: (dialogContext) {
+        final baseTheme = Theme.of(dialogContext);
+        return StatefulBuilder(
+          builder: (statefulContext, setDialogState) {
+            return Theme(
+              data: baseTheme.copyWith(
+                colorScheme: baseTheme.colorScheme.copyWith(
+                  surface: Colors.white,
+                  primary: Colors.black,
+                ),
+                dialogBackgroundColor: Colors.white,
+              ),
+              child: AlertDialog(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                contentPadding: const EdgeInsets.all(16),
+                content: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          child: const Text("Back"),
+                      const Text(
+                        "Payment Details",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.pushReplacementNamed(
-                              this.context,
-                              '/OnPlanningPage',
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Trip: ${transaction.tripCode}',
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Customer: ${transaction.customerName}',
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                      const SizedBox(height: 12),
+
+                      const Text(
+                        "Payment Amount",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      if (existingPaidAmount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Sudah dibayar: ${_formatCurrency(existingPaidAmount)}',
+                            style: const TextStyle(color: Colors.black54),
+                          ),
+                        ),
+                      if (totalCost > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'Total Biaya: ${_formatCurrency(totalCost)}',
+                            style: const TextStyle(color: Colors.black54),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          'Sisa Hutang: ${_formatCurrency(remainingBalance)}',
+                          style: const TextStyle(color: Colors.black54),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: amountController,
+                        decoration: InputDecoration(
+                          hintText: "Input Total",
+                          filled: true,
+                          fillColor: Colors.grey[200],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.only(left: 12, right: 8),
+                            child: Text(
+                              'Rp',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                          child: const Text("Submit"),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 0,
+                            minHeight: 0,
+                          ),
+                          errorText: amountError,
                         ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        "Payment Method",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<String>(
+                        value: selectedMethod,
+                        items: const [
+                          DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                          DropdownMenuItem(
+                            value: 'credit',
+                            child: Text('Credit'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedMethod = value;
+                            methodError = null;
+
+                            if (value == 'cash') {
+                              final double targetAmount =
+                                  remainingBalance > 0
+                                      ? remainingBalance
+                                      : totalCost;
+                              if (targetAmount > 0) {
+                                amountController.text =
+                                    targetAmount % 1 == 0
+                                        ? targetAmount.toStringAsFixed(0)
+                                        : targetAmount.toStringAsFixed(2);
+                              } else {
+                                amountController.clear();
+                              }
+                              amountError = null;
+                            }
+                          });
+                        },
+                        dropdownColor: Colors.white,
+                        decoration: InputDecoration(
+                          hintText: "Select Payment Method",
+                          filled: true,
+                          fillColor: Colors.grey[200],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          errorText: methodError,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                        ),
+                        isExpanded: true,
+                      ),
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        "Payment Type",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: DropdownButtonFormField<String>(
+                          dropdownColor: Colors.white,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                          ),
+                          hint: const Text("Select Payment Type"),
+                          items: const [
+                            DropdownMenuItem(
+                              value: "Cash",
+                              child: Text("Cash"),
+                            ),
+                            DropdownMenuItem(
+                              value: "Transfer",
+                              child: Text("Transfer"),
+                            ),
+                          ],
+                          onChanged: (value) {},
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        "Date",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _dateController,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          hintText: "Select Date",
+                          filled: true,
+                          fillColor: Colors.grey[200],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: dialogContext,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
+                          );
+                          if (picked != null) {
+                            _dateController.text = DateFormat(
+                              'dd/MM/yyyy',
+                            ).format(picked);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        "Note",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: "Write notes here...",
+                          filled: true,
+                          fillColor: Colors.grey[200],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed:
+                                  isSubmitting
+                                      ? null
+                                      : () => Navigator.of(dialogContext).pop(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              child: const Text("Back"),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed:
+                                  isSubmitting
+                                      ? null
+                                      : () async {
+                                        final method = selectedMethod;
+                                        final amountText =
+                                            amountController.text.trim();
+                                        final parsedAmount =
+                                            amountText.isEmpty
+                                                ? 0.0
+                                                : double.tryParse(
+                                                  amountText.replaceAll(
+                                                    ',',
+                                                    '',
+                                                  ),
+                                                );
+
+                                        String? amountValidation;
+                                        String? methodValidation;
+
+                                        if (method == null || method.isEmpty) {
+                                          methodValidation =
+                                              'Pilih metode pembayaran';
+                                        }
+                                        if (parsedAmount == null) {
+                                          amountValidation =
+                                              'Nominal tidak valid';
+                                        } else if (parsedAmount < 0) {
+                                          amountValidation =
+                                              'Nominal tidak boleh negatif';
+                                        } else if (method == 'credit' &&
+                                            parsedAmount > remainingBalance) {
+                                          final double allowed =
+                                              remainingBalance;
+                                          amountValidation =
+                                              'Nominal melebihi sisa hutang (${_formatCurrency(allowed)})';
+                                        }
+
+                                        if (amountValidation != null ||
+                                            methodValidation != null) {
+                                          setDialogState(() {
+                                            amountError = amountValidation;
+                                            methodError = methodValidation;
+                                          });
+                                          return;
+                                        }
+
+                                        setDialogState(() {
+                                          isSubmitting = true;
+                                          amountError = null;
+                                          methodError = null;
+                                        });
+
+                                        try {
+                                          await TransactionService.setPaymentPlan(
+                                            transaction.id,
+                                            {
+                                              'payment_plan_method': method,
+                                              'paid_amount': parsedAmount,
+                                            },
+                                          );
+
+                                          if (!mounted) return;
+
+                                          Navigator.of(dialogContext).pop();
+
+                                          await _loadTransactions();
+
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Payment plan updated',
+                                              ),
+                                            ),
+                                          );
+                                        } catch (error) {
+                                          setDialogState(() {
+                                            isSubmitting = false;
+                                          });
+
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(error.toString()),
+                                            ),
+                                          );
+                                        }
+                                      },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.teal,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              child:
+                                  isSubmitting
+                                      ? const SizedBox(
+                                        height: 16,
+                                        width: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                      : const Text("Submit"),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
-    );
+    ).whenComplete(() {
+      amountController.dispose();
+    });
   }
 }

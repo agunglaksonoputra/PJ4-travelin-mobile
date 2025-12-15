@@ -2,19 +2,18 @@ import '../config/api_config.dart';
 import 'api_services.dart';
 
 class ReportService {
-  // Tentukan API version khusus report
-  static final String _baseUrl =
-  ApiConfig.baseUrl(ApiVersion.v1);
+  static final String _baseUrl = ApiConfig.baseUrl(ApiVersion.v1);
 
-  /// Get report data
-  static Future<dynamic> getReport() async {
+  /// Create transaction report
+  static Future<dynamic> createReport(Map<String, dynamic> payload) async {
     try {
-      return await ApiServices.get(
+      return await ApiServices.post(
         _baseUrl,
-        "report",
+        "transactions/reports",
+        payload,
       );
     } catch (e) {
-      throw Exception("Failed to fetch report data: $e");
+      throw Exception("Failed to create report: $e");
     }
   }
 }

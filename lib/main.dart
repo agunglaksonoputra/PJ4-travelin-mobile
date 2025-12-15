@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:travelin/pages/OnReport_page.dart';
 import 'package:travelin/pages/admin/admin_page.dart';
 import 'package:travelin/pages/admin/user_master_page.dart';
@@ -14,6 +16,9 @@ import 'pages/OnPayment_page.dart';
 import 'pages/OnPlanning_page.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null);
+  Intl.defaultLocale = 'id_ID';
   await dotenv.load(fileName: ".env");
 
   runApp(const MyApp());
