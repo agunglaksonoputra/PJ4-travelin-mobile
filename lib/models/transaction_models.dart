@@ -18,6 +18,9 @@ class TransactionModel {
     this.pricePerDay,
     this.durationDays,
     this.totalCost,
+    this.paymentPlanMethod,
+    this.paidAmount,
+    this.outstandingAmount,
     this.createdBy,
     this.createdAt,
     this.updatedAt,
@@ -38,6 +41,9 @@ class TransactionModel {
   final double? pricePerDay;
   final int? durationDays;
   final double? totalCost;
+  final String? paymentPlanMethod;
+  final double? paidAmount;
+  final double? outstandingAmount;
   final int? createdBy;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -59,6 +65,9 @@ class TransactionModel {
       pricePerDay: _toDouble(json['price_per_day']),
       durationDays: _toInt(json['duration_days']),
       totalCost: _toDouble(json['total_cost']),
+      paymentPlanMethod: json['payment_plan_method'] as String?,
+      paidAmount: _toDouble(json['paid_amount']),
+      outstandingAmount: _toDouble(json['outstanding_amount']),
       createdBy: _toInt(json['created_by']),
       createdAt: _parseDateTime(json['created_at']),
       updatedAt: _parseDateTime(json['updated_at']),
@@ -87,6 +96,9 @@ class TransactionModel {
       if (pricePerDay != null) 'price_per_day': pricePerDay,
       if (durationDays != null) 'duration_days': durationDays,
       if (totalCost != null) 'total_cost': totalCost,
+      if (paymentPlanMethod != null) 'payment_plan_method': paymentPlanMethod,
+      if (paidAmount != null) 'paid_amount': paidAmount,
+      if (outstandingAmount != null) 'outstanding_amount': outstandingAmount,
       if (createdBy != null) 'created_by': createdBy,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),

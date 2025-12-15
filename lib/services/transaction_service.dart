@@ -149,6 +149,42 @@ class TransactionService {
     }
   }
 
+  static Future<TransactionModel> setPaymentPlan(
+    int transactionId,
+    Map<String, dynamic> data,
+  ) async {
+    AppLogger.i(
+      'Setting payment plan for transaction $transactionId with payload $data',
+    );
+
+    try {
+      final response = await ApiServices.post(
+        _baseUrl,
+        '$_resource/$transactionId/payment-plan',
+        data,
+      );
+
+      AppLogger.d('Set payment plan response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+
+      final body = payload['data'];
+      if (body is Map<String, dynamic>) {
+        return TransactionModel.fromJson(body);
+      }
+
+      throw Exception('Invalid response format: expected object in data field');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to set payment plan',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
   static Future<void> deleteTransaction(int transactionId) async {
     AppLogger.i('Deleting transaction id $transactionId');
 
