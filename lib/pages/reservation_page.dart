@@ -21,6 +21,7 @@ class ReservationPage extends StatefulWidget {
 
 class _ReservationPageState extends State<ReservationPage> {
   final customerController = TextEditingController();
+  final customerPhoneController = TextEditingController();
   final leaveDateController = TextEditingController();
   final returnDateController = TextEditingController();
   final tripCategoryController = TextEditingController();
@@ -56,6 +57,7 @@ class _ReservationPageState extends State<ReservationPage> {
     leaveDateController.removeListener(_maybeRecalculateTotalCost);
     returnDateController.removeListener(_maybeRecalculateTotalCost);
     customerController.dispose();
+    customerPhoneController.dispose();
     leaveDateController.dispose();
     returnDateController.dispose();
     tripCategoryController.dispose();
@@ -94,6 +96,13 @@ class _ReservationPageState extends State<ReservationPage> {
                 icon: FontAwesomeIcons.user,
                 hint: 'Masukkan nama pelanggan',
                 controller: customerController,
+              ),
+              const SizedBox(height: 16),
+              CustomInputField(
+                label: 'Nomor Telepon',
+                icon: FontAwesomeIcons.phone,
+                hint: 'Masukkan nomor telepon',
+                controller: customerPhoneController,
               ),
               const SizedBox(height: 16),
               VehicleDropdown(
@@ -312,6 +321,7 @@ class _ReservationPageState extends State<ReservationPage> {
     final customer = customerController.text.trim();
     final tripCategory = tripCategoryController.text.trim();
     final destination = destinationController.text.trim();
+    final phoneNumber = customerPhoneController.text.trim();
     final startDate = _parseDisplayedDate(leaveDateController.text);
     final endDate = _parseDisplayedDate(returnDateController.text);
     final pricePerDay = tariff.basePrice;
@@ -322,6 +332,15 @@ class _ReservationPageState extends State<ReservationPage> {
       CustomFlushbar.show(
         context,
         message: 'Nama customer wajib diisi.',
+        type: FlushbarType.warning,
+      );
+      return;
+    }
+
+    if (phoneNumber.isEmpty) {
+      CustomFlushbar.show(
+        context,
+        message: 'Nomor telepon wajib diisi.',
         type: FlushbarType.warning,
       );
       return;
@@ -360,6 +379,7 @@ class _ReservationPageState extends State<ReservationPage> {
     final payload = <String, dynamic>{
       'trip_code': tripCode,
       'customer_name': customer,
+      'customer_phone': phoneNumber,
       'vehicle_id': vehicle.id,
       'tariff_id': tariff.id,
       'status': 'planning',
@@ -408,6 +428,7 @@ class _ReservationPageState extends State<ReservationPage> {
       _tariffResetToken++;
     });
     customerController.clear();
+    customerPhoneController.clear();
     leaveDateController.clear();
     returnDateController.clear();
     tripCategoryController.clear();
