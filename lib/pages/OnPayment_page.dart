@@ -4,7 +4,9 @@ import '../models/payment_models.dart';
 import '../models/vehicle_models.dart';
 import '../services/payment_service.dart';
 import '../services/vehicle_service.dart';
+import '../utils/currency_input_utils.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/custom_flushbar.dart';
 
 class OnPaymentPage extends StatefulWidget {
   const OnPaymentPage({super.key});
@@ -236,16 +238,18 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     return ListView.separated(
       itemCount: _paymentGroups.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) => _buildPaymentCard(_paymentGroups[index]),
+      itemBuilder:
+          (context, index) => _buildPaymentCard(_paymentGroups[index], index),
     );
   }
 
-  Widget _buildPaymentCard(_VehiclePaymentGroup group) {
+  Widget _buildPaymentCard(_VehiclePaymentGroup group, int index) {
     final summary = group.transaction;
-    final title =
+    final tripLabel =
         summary?.tripCode?.isNotEmpty == true
-            ? 'Trip ${summary!.tripCode}'
-            : 'Transaksi #${group.transactionId}';
+            ? summary!.tripCode
+            : '#${group.transactionId}';
+    final title = 'Trip #${index + 1} - $tripLabel';
     final customerName =
         summary?.customerName?.isNotEmpty == true ? summary!.customerName : '-';
     final totalCost = summary?.totalCost;
@@ -253,6 +257,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     final remaining = group.remainingAmount;
     final latest = group.latestPayment;
     final latestDate = _formatDate(latest?.paidAt);
+    final isPaidOff = remaining != null && remaining <= 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -279,11 +284,6 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
             'Customer: $customerName',
             style: const TextStyle(color: Colors.black87),
           ),
-          if (summary?.status != null)
-            Text(
-              'Status: ${summary!.status}',
-              style: const TextStyle(color: Colors.black54),
-            ),
           const Divider(height: 20, thickness: 1, color: Colors.black12),
           if (totalCost != null) Text('Total: ${_formatCurrency(totalCost)}'),
           Text('Dibayar: ${_formatCurrency(totalPaid)}'),
@@ -322,16 +322,18 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
               Expanded(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlue,
+                    backgroundColor:
+                        isPaidOff ? Colors.grey[400] : Colors.lightBlue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  onPressed: () => _showCreatePaymentDialog(group),
-                  child: const Text(
-                    'PAYMENT',
-                    style: TextStyle(
+                  onPressed:
+                      isPaidOff ? null : () => _showCreatePaymentDialog(group),
+                  child: Text(
+                    isPaidOff ? 'LUNAS' : 'PAYMENT',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -392,7 +394,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
         _selectedVehicle = null;
         _paymentGroups = [];
       });
-      _showErrorSnackBar(e.toString());
+      _showErrorFlushbar(e.toString());
     }
   }
 
@@ -417,7 +419,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
         _paymentsError = e.toString();
         _paymentGroups = [];
       });
-      _showErrorSnackBar(e.toString());
+      _showErrorFlushbar(e.toString());
     }
   }
 
@@ -626,15 +628,23 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
   }
 
   void _showCreatePaymentDialog(_VehiclePaymentGroup group) {
+    final NumberFormat dialogCurrencyFormat = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
     final amountController = TextEditingController(
       text:
           group.remainingAmount != null && group.remainingAmount! > 0
-              ? group.remainingAmount!.toStringAsFixed(0)
+              ? dialogCurrencyFormat.format(group.remainingAmount!)
               : '',
     );
     final noteController = TextEditingController();
     String method = 'cash';
     bool isSubmitting = false;
+    bool isFormattingAmount = false;
+
+    bool dialogClosed = false;
 
     showDialog(
       context: context,
@@ -644,10 +654,11 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
           builder: (context, setModalState) {
             Future<void> submit() async {
               final rawAmount = amountController.text.trim();
-              final amount = double.tryParse(rawAmount);
+              final digitsOnly = rawAmount.replaceAll(RegExp(r'[^0-9]'), '');
+              final amount = double.tryParse(digitsOnly);
 
               if (amount == null || amount <= 0) {
-                _showErrorSnackBar('Masukkan nominal pembayaran yang valid');
+                _showErrorFlushbar('Masukkan nominal pembayaran yang valid');
                 return;
               }
 
@@ -665,17 +676,19 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
                 );
 
                 if (!mounted) return;
+                dialogClosed =
+                    true; // Prevent setState after the dialog is popped
                 Navigator.of(context).pop();
-                _showSuccessSnackBar('Pembayaran berhasil ditambahkan');
+                _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
                 final selectedVehicle = _selectedVehicle;
                 if (selectedVehicle != null) {
                   await _loadPayments(selectedVehicle.id);
                 }
               } catch (e) {
                 if (!mounted) return;
-                _showErrorSnackBar(e.toString());
+                _showErrorFlushbar(e.toString());
               } finally {
-                if (context.mounted) {
+                if (!dialogClosed && context.mounted) {
                   setModalState(() => isSubmitting = false);
                 }
               }
@@ -691,10 +704,43 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'Nominal',
-                      prefixText: 'Rp ',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Nominal'),
+                    onChanged: (value) {
+                      if (isFormattingAmount) return;
+
+                      final result = formatCurrencyInput(
+                        value,
+                        dialogCurrencyFormat,
+                      );
+
+                      if (!result.shouldUpdateText) return;
+
+                      isFormattingAmount = true;
+
+                      if (result.shouldClear) {
+                        amountController.clear();
+                      } else if (result.isOverride &&
+                          result.formattedValue != null) {
+                        final currentOffset =
+                            amountController.selection.baseOffset;
+                        final oldLength = amountController.text.length;
+                        final newText = result.formattedValue!;
+                        final newLength = newText.length;
+                        final diff = newLength - oldLength;
+                        final newOffset = (currentOffset + diff).clamp(
+                          0,
+                          newLength,
+                        );
+
+                        amountController
+                            .value = amountController.value.copyWith(
+                          text: newText,
+                          selection: TextSelection.collapsed(offset: newOffset),
+                        );
+                      }
+
+                      isFormattingAmount = false;
+                    },
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
@@ -745,7 +791,13 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
           },
         );
       },
-    );
+    ).then((_) {
+      // Dispose controllers after dialog closes
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        amountController.dispose();
+        noteController.dispose();
+      });
+    });
   }
 
   List<_VehiclePaymentGroup> _groupPaymentsByTransaction(
@@ -830,16 +882,12 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     return '$day/$month/$year';
   }
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  void _showErrorFlushbar(String message) {
+    CustomFlushbar.show(context, message: message, type: FlushbarType.error);
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  void _showSuccessFlushbar(String message) {
+    CustomFlushbar.show(context, message: message, type: FlushbarType.success);
   }
 }
 
