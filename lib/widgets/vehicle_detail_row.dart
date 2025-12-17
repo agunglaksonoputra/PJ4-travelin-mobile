@@ -22,13 +22,6 @@ class VehicleDetailRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(
-            width: 120,
-            child: Text(
-              '',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
           SizedBox(
             width: 120,
             child: Text(
