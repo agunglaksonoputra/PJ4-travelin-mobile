@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import 'package:travelin/pages/reservation_page.dart';
 import '../services/user_service.dart';
+import '../services/report_service.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/planning_table.dart';
 import '../widgets/bottom_navbar.dart';
@@ -17,11 +19,14 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
   String username = "Loading...";
+  double totalOperationalCost = 0;
+  bool isLoadingCost = true;
 
   @override
   void initState() {
     super.initState();
     loadUser();
+    loadTotalOperationalCost();
   }
 
   Future<void> loadUser() async {
@@ -34,6 +39,31 @@ class _HomePageState extends State<HomePage> {
       username = await UserService.getUserName();
     }
     setState(() {});
+  }
+
+  Future<void> loadTotalOperationalCost() async {
+    try {
+      final cost = await ReportService.getTotalOperationalCost();
+      setState(() {
+        totalOperationalCost = cost;
+        isLoadingCost = false;
+      });
+    } catch (e) {
+      print("Error loading operational cost: $e");
+      setState(() {
+        totalOperationalCost = 0;
+        isLoadingCost = false;
+      });
+    }
+  }
+
+  String _formatCurrency(double amount) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(amount);
   }
 
   void onItemTapped(int index) {
@@ -133,7 +163,10 @@ class _HomePageState extends State<HomePage> {
                     SummaryCard(
                       color: Color(0xFFE52F1D),
                       title: 'Pengeluaran',
-                      amount: 'Rp 1.000.000',
+                      amount:
+                          isLoadingCost
+                              ? 'Loading...'
+                              : _formatCurrency(totalOperationalCost),
                       icon: FontAwesomeIcons.moneyBillTransfer,
                     ),
                     const SizedBox(height: 8),
