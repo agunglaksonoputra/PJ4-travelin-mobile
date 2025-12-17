@@ -70,4 +70,33 @@ class ReportService {
       throw Exception('Failed to fetch reporting transactions: $e');
     }
   }
+
+  /// Fetch closed transactions
+  static Future<List<dynamic>> fetchClosedTransactions({int? limit}) async {
+    try {
+      AppLogger.i('Fetching closed transactions');
+
+      String endpoint = "transactions/by-status/closed";
+      if (limit != null && limit > 0) {
+        endpoint += "?limit=$limit";
+      }
+
+      final response = await ApiServices.get(_baseUrl, endpoint);
+      AppLogger.d('Closed transactions response: $response');
+
+      if (response is Map && response['success'] == true) {
+        final data = response['data'];
+        if (data is List) return data;
+      }
+
+      throw Exception('Invalid response format');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to fetch closed transactions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw Exception('Failed to fetch closed transactions: $e');
+    }
+  }
 }

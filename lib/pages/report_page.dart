@@ -1,9 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:travelin/pages/homepage.dart';
 import '../widgets/bottom_navbar.dart';
+import '../services/report_service.dart';
+import '../models/transaction_models.dart';
 
-class ReportPage extends StatelessWidget {
+class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
+
+  @override
+  State<ReportPage> createState() => _ReportPageState();
+}
+
+class _ReportPageState extends State<ReportPage> {
+  late Future<List<TransactionModel>> _transactionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _transactionsFuture = _fetchClosedTransactions();
+  }
+
+  Future<List<TransactionModel>> _fetchClosedTransactions() async {
+    try {
+      final response = await ReportService.fetchClosedTransactions();
+      final transactions =
+          (response as List)
+              .map(
+                (json) =>
+                    TransactionModel.fromJson(json as Map<String, dynamic>),
+              )
+              .toList();
+      return transactions;
+    } catch (e) {
+      throw Exception('Failed to fetch closed transactions: $e');
+    }
+  }
+
+  String _formatCurrency(double? amount) {
+    if (amount == null) return 'Rp 0';
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(amount);
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '-';
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,94 +81,165 @@ class ReportPage extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
             child: Text(
-              "Daftar Transaksi",
+              "Daftar Transaksi Selesai",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
 
           // 🔹 List transaksi
           Expanded(
-            child: ListView.builder(
-              itemCount: 4,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ReportDetailPage(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: FutureBuilder<List<TransactionModel>>(
+              future: _transactionsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              height: 50,
-                              width: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.teal,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.directions_bus,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  "Transaction #1",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                Text(
-                                  "Mobil 1",
-                                  style: TextStyle(color: Colors.black54),
-                                ),
-                                Text(
-                                  "19/10/2025",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 48,
                         ),
-                        const Text(
-                          "Rp 2.000.000",
+                        const SizedBox(height: 16),
+                        Text(
+                          'Gagal memuat transaksi',
                           style: TextStyle(
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            color: Colors.grey[700],
                           ),
                         ),
                       ],
                     ),
-                  ),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.receipt_long,
+                          color: Colors.grey[300],
+                          size: 64,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Tidak ada transaksi selesai',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final transactions = snapshot.data!;
+                return ListView.builder(
+                  itemCount: transactions.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemBuilder: (context, index) {
+                    final transaction = transactions[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) =>
+                                    ReportDetailPage(transaction: transaction),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    height: 50,
+                                    width: 50,
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.directions_bus,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          transaction.tripCode,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          transaction.customerName,
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          _formatDate(transaction.endDate),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              _formatCurrency(transaction.totalCost),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -315,7 +433,24 @@ class WithdrawPopup extends StatelessWidget {
 }
 
 class ReportDetailPage extends StatelessWidget {
-  const ReportDetailPage({super.key});
+  final TransactionModel transaction;
+
+  const ReportDetailPage({super.key, required this.transaction});
+
+  String _formatCurrency(double? amount) {
+    if (amount == null) return 'Rp 0';
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(amount);
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '-';
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -327,10 +462,7 @@ class ReportDetailPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const ReportPage()),
-            );
+            Navigator.pop(context);
           },
         ),
         title: const Text(
@@ -359,47 +491,84 @@ class ReportDetailPage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        height: 50,
-                        width: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.teal,
-                          borderRadius: BorderRadius.circular(10),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 50,
+                          width: 50,
+                          decoration: BoxDecoration(
+                            color: Colors.teal,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.directions_bus,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.directions_bus,
-                          color: Colors.white,
-                          size: 28,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                transaction.tripCode,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                transaction.customerName,
+                                style: const TextStyle(color: Colors.black54),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                _formatDate(transaction.endDate),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        _formatCurrency(transaction.totalCost),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "Transaction #1",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green[100],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          transaction.status.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
                           ),
-                          Text(
-                            "Mobil 1",
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                          Text(
-                            "19/10/2025",
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
-                  ),
-                  const Text(
-                    "Rp 2.000.000",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ],
               ),
@@ -407,39 +576,62 @@ class ReportDetailPage extends StatelessWidget {
               const Divider(),
               const SizedBox(height: 10),
 
+              // Transaction Details
               const Text(
-                "Payment Detail",
+                "Detail Transaksi",
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 6),
-              _detailRow("Payment Amount", "Rp 2.000.000"),
-              _detailRow("Payment 1", "Rp 1.000.000"),
-              _detailRow("Payment Methode", "Cash"),
-              _detailRow("Date", "19/10/2025"),
-              _detailRow("Payment 2", "Rp 1.000.000"),
-              _detailRow("Payment Methode", "Cash"),
-              _detailRow("Date", "19/10/2025"),
+              _detailRow("Kode Transaksi", transaction.tripCode),
+              _detailRow("Nama Pelanggan", transaction.customerName),
+              _detailRow("Total Biaya", _formatCurrency(transaction.totalCost)),
+              _detailRow(
+                "Biaya Per Hari",
+                _formatCurrency(transaction.pricePerDay),
+              ),
+              _detailRow("Durasi", "${transaction.durationDays ?? '-'} hari"),
+              _detailRow("Destinasi", transaction.destination ?? '-'),
+              _detailRow("Tanggal Mulai", _formatDate(transaction.startDate)),
+              _detailRow("Tanggal Selesai", _formatDate(transaction.endDate)),
 
               const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 10),
+
+              // Payment Details
               const Text(
-                "Trip Detail",
+                "Detail Pembayaran",
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 6),
-              _detailRow("KM Start", "1.000 KM"),
-              _detailRow("KM End", "1.500 KM"),
-              _detailRow("Driver Fee", "Rp 500.000"),
-              _detailRow("Gasoline", "100 L"),
-              _detailRow("Destination", "Bandung"),
-              const SizedBox(height: 8),
-              const Text(
-                "Notes",
-                style: TextStyle(fontWeight: FontWeight.bold),
+              _detailRow(
+                "Metode Pembayaran",
+                transaction.paymentPlanMethod ?? '-',
               ),
-              const Text(
-                "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et.",
-                style: TextStyle(color: Colors.black87),
+              _detailRow("Total Biaya", _formatCurrency(transaction.totalCost)),
+              _detailRow(
+                "Sudah Dibayar",
+                _formatCurrency(transaction.paidAmount),
               ),
+              _detailRow(
+                "Sisa Pembayaran",
+                _formatCurrency(transaction.outstandingAmount),
+              ),
+
+              if (transaction.notes != null &&
+                  transaction.notes!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 10),
+                const Text(
+                  "Catatan",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  transaction.notes!,
+                  style: const TextStyle(color: Colors.black87),
+                ),
+              ],
             ],
           ),
         ),
@@ -456,7 +648,7 @@ class ReportDetailPage extends StatelessWidget {
 
   Widget _detailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -464,9 +656,12 @@ class ReportDetailPage extends StatelessWidget {
             label,
             style: const TextStyle(color: Colors.black87, fontSize: 14),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              textAlign: TextAlign.end,
+            ),
           ),
         ],
       ),
