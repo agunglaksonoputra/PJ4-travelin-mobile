@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:travelin/pages/reservation_page.dart';
 import '../services/user_service.dart';
 import '../services/report_service.dart';
+import '../services/transaction_service.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/planning_table.dart';
 import '../widgets/bottom_navbar.dart';
@@ -20,13 +21,16 @@ class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
   String username = "Loading...";
   double totalOperationalCost = 0;
+  double totalRevenue = 0;
   bool isLoadingCost = true;
+  bool isLoadingRevenue = true;
 
   @override
   void initState() {
     super.initState();
     loadUser();
     loadTotalOperationalCost();
+    loadTotalRevenue();
   }
 
   Future<void> loadUser() async {
@@ -39,6 +43,22 @@ class _HomePageState extends State<HomePage> {
       username = await UserService.getUserName();
     }
     setState(() {});
+  }
+
+  Future<void> loadTotalRevenue() async {
+    try {
+      final revenue = await TransactionService.getTotalPaidAmountClosed();
+      setState(() {
+        totalRevenue = revenue;
+        isLoadingRevenue = false;
+      });
+    } catch (e) {
+      print("Error loading revenue: $e");
+      setState(() {
+        totalRevenue = 0;
+        isLoadingRevenue = false;
+      });
+    }
   }
 
   Future<void> loadTotalOperationalCost() async {
@@ -156,7 +176,10 @@ class _HomePageState extends State<HomePage> {
                     SummaryCard(
                       color: Color(0xFF00BFA6),
                       title: 'Pendapatan',
-                      amount: 'Rp 1.000.000',
+                      amount:
+                          isLoadingRevenue
+                              ? 'Loading...'
+                              : _formatCurrency(totalRevenue),
                       icon: FontAwesomeIcons.handHoldingDollar,
                     ),
                     const SizedBox(height: 8),
@@ -173,7 +196,12 @@ class _HomePageState extends State<HomePage> {
                     SummaryCard(
                       color: Color(0xFF9D00FF),
                       title: 'Profit',
-                      amount: 'Rp 1.000.000',
+                      amount:
+                          (isLoadingRevenue || isLoadingCost)
+                              ? 'Loading...'
+                              : _formatCurrency(
+                                totalRevenue - totalOperationalCost,
+                              ),
                       icon: FontAwesomeIcons.sackDollar,
                     ),
                   ],
