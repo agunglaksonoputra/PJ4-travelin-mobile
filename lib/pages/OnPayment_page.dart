@@ -4,9 +4,9 @@ import '../models/payment_models.dart';
 import '../models/vehicle_models.dart';
 import '../services/payment_service.dart';
 import '../services/vehicle_service.dart';
-import '../utils/currency_input_utils.dart';
 import '../widgets/bottom_navbar.dart';
 import '../widgets/custom_flushbar.dart';
+import '../widgets/form/OnPayment/payment_dialog.dart';
 
 class OnPaymentPage extends StatefulWidget {
   const OnPaymentPage({super.key});
@@ -249,7 +249,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
         summary?.tripCode?.isNotEmpty == true
             ? summary!.tripCode
             : '#${group.transactionId}';
-    final title = 'Trip #${index + 1} - $tripLabel';
+    final title = '$tripLabel';
     final customerName =
         summary?.customerName?.isNotEmpty == true ? summary!.customerName : '-';
     final totalCost = summary?.totalCost;
@@ -628,176 +628,21 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
   }
 
   void _showCreatePaymentDialog(_VehiclePaymentGroup group) {
-    final NumberFormat dialogCurrencyFormat = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-    final amountController = TextEditingController(
-      text:
-          group.remainingAmount != null && group.remainingAmount! > 0
-              ? dialogCurrencyFormat.format(group.remainingAmount!)
-              : '',
-    );
-    final noteController = TextEditingController();
-    String method = 'cash';
-    bool isSubmitting = false;
-    bool isFormattingAmount = false;
-
-    bool dialogClosed = false;
-
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            Future<void> submit() async {
-              final rawAmount = amountController.text.trim();
-              final digitsOnly = rawAmount.replaceAll(RegExp(r'[^0-9]'), '');
-              final amount = double.tryParse(digitsOnly);
-
-              if (amount == null || amount <= 0) {
-                _showErrorFlushbar('Masukkan nominal pembayaran yang valid');
-                return;
+      builder:
+          (_) => PaymentDialog(
+            transactionId: group.transactionId,
+            remainingAmount: group.remainingAmount,
+            onPaymentSuccess: () async {
+              final selectedVehicle = _selectedVehicle;
+              if (selectedVehicle != null) {
+                await _loadPayments(selectedVehicle.id);
               }
-
-              setModalState(() => isSubmitting = true);
-
-              try {
-                await PaymentService.createPayment(
-                  transactionId: group.transactionId,
-                  amount: amount,
-                  method: method,
-                  note:
-                      noteController.text.trim().isEmpty
-                          ? null
-                          : noteController.text.trim(),
-                );
-
-                if (!mounted) return;
-                dialogClosed =
-                    true; // Prevent setState after the dialog is popped
-                Navigator.of(context).pop();
-                _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
-                final selectedVehicle = _selectedVehicle;
-                if (selectedVehicle != null) {
-                  await _loadPayments(selectedVehicle.id);
-                }
-              } catch (e) {
-                if (!mounted) return;
-                _showErrorFlushbar(e.toString());
-              } finally {
-                if (!dialogClosed && context.mounted) {
-                  setModalState(() => isSubmitting = false);
-                }
-              }
-            }
-
-            return AlertDialog(
-              title: const Text('Tambah Pembayaran'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: amountController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(labelText: 'Nominal'),
-                    onChanged: (value) {
-                      if (isFormattingAmount) return;
-
-                      final result = formatCurrencyInput(
-                        value,
-                        dialogCurrencyFormat,
-                      );
-
-                      if (!result.shouldUpdateText) return;
-
-                      isFormattingAmount = true;
-
-                      if (result.shouldClear) {
-                        amountController.clear();
-                      } else if (result.isOverride &&
-                          result.formattedValue != null) {
-                        final currentOffset =
-                            amountController.selection.baseOffset;
-                        final oldLength = amountController.text.length;
-                        final newText = result.formattedValue!;
-                        final newLength = newText.length;
-                        final diff = newLength - oldLength;
-                        final newOffset = (currentOffset + diff).clamp(
-                          0,
-                          newLength,
-                        );
-
-                        amountController
-                            .value = amountController.value.copyWith(
-                          text: newText,
-                          selection: TextSelection.collapsed(offset: newOffset),
-                        );
-                      }
-
-                      isFormattingAmount = false;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: method,
-                    decoration: const InputDecoration(labelText: 'Metode'),
-                    items: const [
-                      DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                      DropdownMenuItem(
-                        value: 'transfer',
-                        child: Text('Transfer'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setModalState(() => method = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: noteController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Catatan (opsional)',
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed:
-                      isSubmitting ? null : () => Navigator.of(context).pop(),
-                  child: const Text('BATAL'),
-                ),
-                ElevatedButton(
-                  onPressed: isSubmitting ? null : submit,
-                  child:
-                      isSubmitting
-                          ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Text('SIMPAN'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    ).then((_) {
-      // Dispose controllers after dialog closes
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        amountController.dispose();
-        noteController.dispose();
-      });
-    });
+            },
+          ),
+    );
   }
 
   List<_VehiclePaymentGroup> _groupPaymentsByTransaction(
