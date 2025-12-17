@@ -39,4 +39,35 @@ class ReportService {
       throw Exception("Failed to fetch total operational cost: $e");
     }
   }
+
+  /// Fetch reporting transactions
+  static Future<List<dynamic>> fetchReportingTransactions({
+    int? vehicleId,
+  }) async {
+    try {
+      AppLogger.i('Fetching reporting transactions for vehicle: $vehicleId');
+
+      String endpoint = "transactions/reporting";
+      if (vehicleId != null) {
+        endpoint += "?vehicle_id=$vehicleId";
+      }
+
+      final response = await ApiServices.get(_baseUrl, endpoint);
+      AppLogger.d('Reporting transactions response: $response');
+
+      if (response is Map && response['success'] == true) {
+        final data = response['data'];
+        if (data is List) return data;
+      }
+
+      throw Exception('Invalid response format');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to fetch reporting transactions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw Exception('Failed to fetch reporting transactions: $e');
+    }
+  }
 }

@@ -22,6 +22,11 @@ class _OnReportPageState extends State<OnReportPage> {
   String? transactionError;
   String? selectedTransactionId;
 
+  final FocusNode _transactionFocusNode = FocusNode();
+  List<Map<String, dynamic>> _reportingTransactions = [];
+  bool _isLoadingReportingSuggestions = false;
+  String? _reportingSuggestionsError;
+
   String summaryCustomer = '';
   int summaryTotalTrips = 0;
   double summaryTotalPayment = 0.0;
@@ -48,6 +53,12 @@ class _OnReportPageState extends State<OnReportPage> {
   @override
   void initState() {
     super.initState();
+    _transactionFocusNode.addListener(() {
+      if (_transactionFocusNode.hasFocus) {
+        _ensureReportingTransactionsLoaded();
+      }
+    });
+    _ensureReportingTransactionsLoaded();
   }
 
   @override
@@ -59,6 +70,7 @@ class _OnReportPageState extends State<OnReportPage> {
     gasolineController.dispose();
     destinationController.dispose();
     othersController.dispose();
+    _transactionFocusNode.dispose();
     super.dispose();
   }
 
@@ -131,6 +143,48 @@ class _OnReportPageState extends State<OnReportPage> {
     }
   }
 
+  Future<void> _ensureReportingTransactionsLoaded({bool force = false}) async {
+    if (_selectedVehicle == null) {
+      return;
+    }
+
+    if (_isLoadingReportingSuggestions ||
+        (!force && _reportingTransactions.isNotEmpty)) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingReportingSuggestions = true;
+      _reportingSuggestionsError = null;
+    });
+
+    try {
+      final result = await ReportService.fetchReportingTransactions(
+        vehicleId: _selectedVehicle!.id,
+      );
+      final parsed =
+          result
+              .whereType<Map<String, dynamic>>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+
+      if (!mounted) return;
+      setState(() {
+        _reportingTransactions = parsed;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _reportingSuggestionsError = e.toString();
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingReportingSuggestions = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,8 +210,10 @@ class _OnReportPageState extends State<OnReportPage> {
               onChanged: (vehicle) {
                 setState(() {
                   _selectedVehicle = vehicle;
+                  _reportingTransactions = [];
                 });
                 _loadTransactionsForVehicle(vehicle.id);
+                _ensureReportingTransactionsLoaded(force: true);
               },
             ),
             const SizedBox(height: 20),
@@ -518,24 +574,7 @@ class _OnReportPageState extends State<OnReportPage> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   const SizedBox(height: 10),
-                  _buildInputField(
-                    "Transaction",
-                    "Input Transaction ID",
-                    transactionIdController,
-                  ),
-                  if (isLoadingTransactions)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      child: Text('Memuat transaksi...'),
-                    ),
-                  if (transactionError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        'Transaksi: ${transactionError!}',
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
+                  _buildTransactionAutocompleteField(),
                   const SizedBox(height: 6),
                   _buildInputField("KM Start", "Input Data", kmStartController),
                   _buildInputField("KM End", "Input Data", kmEndController),
@@ -693,6 +732,151 @@ class _OnReportPageState extends State<OnReportPage> {
         );
       },
     );
+  }
+
+  Widget _buildTransactionAutocompleteField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Transaction",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          RawAutocomplete<Map<String, dynamic>>(
+            textEditingController: transactionIdController,
+            focusNode: _transactionFocusNode,
+            displayStringForOption: _stringifyId,
+            optionsBuilder: (textEditingValue) {
+              final query = textEditingValue.text.trim().toLowerCase();
+              Iterable<Map<String, dynamic>> base = _reportingTransactions;
+
+              if (query.isNotEmpty) {
+                base = base.where((tx) {
+                  final id = _stringifyId(tx);
+                  final trip = _stringifyTrip(tx).toLowerCase();
+                  final customer = _stringifyCustomer(tx).toLowerCase();
+                  return id.contains(query) ||
+                      trip.contains(query) ||
+                      customer.contains(query);
+                });
+              }
+
+              return base.take(15);
+            },
+            onSelected: (selection) {
+              transactionIdController.text = _stringifyId(selection);
+            },
+            fieldViewBuilder: (
+              context,
+              controller,
+              focusNode,
+              onFieldSubmitted,
+            ) {
+              return TextField(
+                controller: controller,
+                focusNode: focusNode,
+                onChanged: (_) {
+                  _ensureReportingTransactionsLoaded();
+                },
+                decoration: InputDecoration(
+                  hintText: "Input Transaction ID",
+                  filled: true,
+                  fillColor: const Color(0xFFEDEDED),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  suffixIcon:
+                      _isLoadingReportingSuggestions
+                          ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                          : IconButton(
+                            icon: const Icon(Icons.refresh),
+                            onPressed:
+                                () => _ensureReportingTransactionsLoaded(
+                                  force: true,
+                                ),
+                          ),
+                ),
+              );
+            },
+            optionsViewBuilder: (context, onSelected, options) {
+              final optionList = options.toList();
+              if (optionList.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(8),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 240,
+                      maxWidth: 420,
+                    ),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: optionList.length,
+                      itemBuilder: (context, index) {
+                        final option = optionList[index];
+                        final idLabel = _stringifyId(option);
+                        final trip = _stringifyTrip(option);
+                        final customer = _stringifyCustomer(option);
+
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            trip.isNotEmpty
+                                ? 'ID: $idLabel • $trip'
+                                : 'ID: $idLabel',
+                          ),
+                          subtitle: customer.isNotEmpty ? Text(customer) : null,
+                          onTap: () => onSelected(option),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          if (_reportingSuggestionsError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Gagal memuat transaksi: ${_reportingSuggestionsError!}',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _stringifyId(Map<String, dynamic> tx) {
+    final idValue = tx['id'] ?? tx['transaction_id'] ?? tx['transactionId'];
+    return idValue?.toString() ?? '';
+  }
+
+  String _stringifyTrip(Map<String, dynamic> tx) {
+    final trip = tx['trip_code'] ?? tx['tripCode'];
+    return trip?.toString() ?? '';
+  }
+
+  String _stringifyCustomer(Map<String, dynamic> tx) {
+    final customer = tx['customer_name'] ?? tx['customerName'];
+    return customer?.toString() ?? '';
   }
 
   Widget _buildInputField(
