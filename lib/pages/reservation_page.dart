@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:travelin/services/bookings_service.dart';
@@ -103,6 +104,8 @@ class _ReservationPageState extends State<ReservationPage> {
                 icon: FontAwesomeIcons.phone,
                 hint: 'Masukkan nomor telepon',
                 controller: customerPhoneController,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 16),
               VehicleDropdown(

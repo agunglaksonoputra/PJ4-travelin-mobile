@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class CustomInputField extends StatelessWidget {
@@ -8,6 +9,8 @@ class CustomInputField extends StatelessWidget {
   final TextEditingController controller;
   final bool obscure;
   final VoidCallback? onToggleVisibility;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextInputType keyboardType;
 
   const CustomInputField({
     super.key,
@@ -17,6 +20,8 @@ class CustomInputField extends StatelessWidget {
     required this.controller,
     this.obscure = false,
     this.onToggleVisibility,
+    this.inputFormatters,
+    this.keyboardType = TextInputType.text,
   });
 
   @override
@@ -29,7 +34,7 @@ class CustomInputField extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.black87,
-            fontSize: 14
+            fontSize: 14,
           ),
         ),
 
@@ -38,6 +43,8 @@ class CustomInputField extends StatelessWidget {
         TextField(
           controller: controller,
           obscureText: obscure,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           style: TextStyle(fontSize: 12),
           decoration: InputDecoration(
             filled: true,
@@ -45,22 +52,23 @@ class CustomInputField extends StatelessWidget {
             prefixIcon: Icon(icon, size: 20),
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-            suffixIcon: onToggleVisibility != null
-                ? IconButton(
-              icon: Icon(
-                obscure
-                    ? FontAwesomeIcons.eyeSlash
-                    : FontAwesomeIcons.eye,
-                size: 16,
-              ),
-              onPressed: onToggleVisibility,
-            )
-                : null,
+            suffixIcon:
+                onToggleVisibility != null
+                    ? IconButton(
+                      icon: Icon(
+                        obscure
+                            ? FontAwesomeIcons.eyeSlash
+                            : FontAwesomeIcons.eye,
+                        size: 16,
+                      ),
+                      onPressed: onToggleVisibility,
+                    )
+                    : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.all(12)
+            contentPadding: const EdgeInsets.all(12),
           ),
         ),
       ],
