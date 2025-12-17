@@ -301,7 +301,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
           controller: _noteController,
           maxLines: 3,
           decoration: InputDecoration(
-            hintText: 'Tulis catatan di sini...',
+            hintText: 'Masukkan catatan',
             filled: true,
             fillColor: Colors.grey[200],
             border: OutlineInputBorder(

@@ -292,7 +292,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
   Widget _buildHeader() {
     return const Text(
-      "Payment Details",
+      "Detail Pembayaran",
       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
     );
   }
@@ -301,9 +301,9 @@ class _PaymentDialogState extends State<PaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Trip: ${widget.transaction.tripCode}', style: _infoStyle),
+        Text('Perjalanan: ${widget.transaction.tripCode}', style: _infoStyle),
         const SizedBox(height: 4),
-        Text('Customer: ${widget.transaction.customerName}', style: _infoStyle),
+        Text('Pelanggan: ${widget.transaction.customerName}', style: _infoStyle),
       ],
     );
   }
@@ -313,7 +313,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Payment Amount",
+          "Jumlah Pembayaran",
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         if (_existingPaidAmount > 0)
@@ -336,7 +336,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
         TextField(
           controller: _amountController,
           decoration: InputDecoration(
-            hintText: "Input Total",
+            hintText: "Masukkan jumlah pembayaran",
             filled: true,
             fillColor: Colors.grey[200],
             border: OutlineInputBorder(
@@ -357,7 +357,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Payment Method",
+          "Metode Pembayaran",
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 4),
@@ -370,7 +370,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
           onChanged: _handleMethodChanged,
           dropdownColor: Colors.white,
           decoration: InputDecoration(
-            hintText: "Select Payment Method",
+            hintText: "Pilih metode pembayaran",
             filled: true,
             fillColor: Colors.grey[200],
             border: OutlineInputBorder(
@@ -394,7 +394,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Payment Type",
+          "Tipe Pembayaran",
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 4),
@@ -414,7 +414,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
               ),
               errorText: _paymentTypeError,
             ),
-            hint: const Text("Select Payment Type"),
+            hint: const Text("Pilih tipe pembayaran"),
             items: const [
               DropdownMenuItem(value: "Cash", child: Text("Cash")),
               DropdownMenuItem(value: "Transfer", child: Text("Transfer")),
@@ -436,7 +436,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Date",
+          "Tanggal Pembayaran",
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 4),
@@ -444,7 +444,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
           controller: _dateController,
           readOnly: true,
           decoration: InputDecoration(
-            hintText: "Select Date",
+            hintText: "Pilih tanggal pembayaran",
             filled: true,
             fillColor: Colors.grey[200],
             border: OutlineInputBorder(
@@ -464,7 +464,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Note",
+          "Catatan (Opsional)",
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 4),
@@ -472,7 +472,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
           controller: _noteController,
           maxLines: 4,
           decoration: InputDecoration(
-            hintText: "Write notes here...",
+            hintText: "Masukkan catatan",
             filled: true,
             fillColor: Colors.grey[200],
             border: OutlineInputBorder(
@@ -536,7 +536,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
                           ),
                         ),
                         SizedBox(width: 8),
-                        Text("Processing..."),
+                        Text("Processing"),
                       ],
                     )
                     : const Text("Submit"),
