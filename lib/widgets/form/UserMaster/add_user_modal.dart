@@ -7,9 +7,7 @@ import 'package:travelin/widgets/role_dropdown.dart';
 import 'package:travelin/utils/handler/UserMaster/error_handler.dart';
 
 class AddUserModal extends StatefulWidget {
-  final VoidCallback onUserAdded;
-
-  const AddUserModal({super.key, required this.onUserAdded});
+  const AddUserModal({super.key});
 
   @override
   State<AddUserModal> createState() => _AddUserModalState();
@@ -56,17 +54,8 @@ class _AddUserModalState extends State<AddUserModal> {
 
       if (!mounted) return;
 
-      CustomFlushbar.show(
-        context,
-        message: "User added successfully",
-        type: FlushbarType.success,
-      );
-
-      Navigator.pop(context);
-
-      // Delay callback to avoid navigator lock
-      await Future.delayed(const Duration(milliseconds: 100));
-      widget.onUserAdded();
+      if (!mounted) return;
+      Navigator.pop(context, true); // return success
     } catch (e) {
       if (!mounted) return;
 

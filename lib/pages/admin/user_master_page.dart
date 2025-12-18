@@ -113,16 +113,25 @@ class _UserMasterPageState extends State<UserMasterPage> {
             backgroundColor: Colors.blue,
             elevation: 5,
             shape: const CircleBorder(),
-            onPressed: () {
-              showModalBottomSheet(
+            onPressed: () async {
+              final result = await showModalBottomSheet<bool>(
                 context: context,
                 isScrollControlled: true,
                 backgroundColor: Colors.white,
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
-                builder: (_) => AddUserModal(onUserAdded: _loadUsers),
+                builder: (_) => const AddUserModal(),
               );
+
+              if (result == true && mounted) {
+                await _loadUsers();
+                CustomFlushbar.show(
+                  context,
+                  message: "User added successfully",
+                  type: FlushbarType.success,
+                );
+              }
             },
             child: const Icon(
               FontAwesomeIcons.add,
@@ -160,13 +169,15 @@ class _UserMasterPageState extends State<UserMasterPage> {
   }
 
   void _showusersDetail(UserModel user) {
+    final rootContext = context; // keep parent context for follow-up dialogs
+
     showModalBottomSheet(
-      context: context,
+      context: rootContext,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) {
+      builder: (sheetContext) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           child: Column(
@@ -190,10 +201,13 @@ class _UserMasterPageState extends State<UserMasterPage> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        showModalBottomSheet(
-                          context: context,
+                      onPressed: () async {
+                        await Navigator.of(context).maybePop();
+                        await Future.delayed(Duration.zero);
+                        if (!mounted) return;
+
+                        final result = await showModalBottomSheet<bool>(
+                          context: rootContext,
                           isScrollControlled: true,
                           backgroundColor: Colors.white,
                           shape: const RoundedRectangleBorder(
@@ -201,12 +215,17 @@ class _UserMasterPageState extends State<UserMasterPage> {
                               top: Radius.circular(16),
                             ),
                           ),
-                          builder:
-                              (_) => UpdateUserModal(
-                                user: user,
-                                onUserUpdated: _loadUsers,
-                              ),
+                          builder: (_) => UpdateUserModal(user: user),
                         );
+
+                        if (result == true && mounted) {
+                          await _loadUsers();
+                          CustomFlushbar.show(
+                            rootContext,
+                            message: "User updated successfully",
+                            type: FlushbarType.success,
+                          );
+                        }
                       },
                       icon: const Icon(
                         FontAwesomeIcons.pencil,
@@ -228,16 +247,27 @@ class _UserMasterPageState extends State<UserMasterPage> {
                       onPressed:
                           _currentUserId == user.id
                               ? null
-                              : () {
-                                Navigator.pop(context);
-                                showDialog(
-                                  context: context,
+                              : () async {
+                                await Navigator.of(sheetContext).maybePop();
+                                await Future.delayed(
+                                  Duration.zero,
+                                ); // wait for navigator unlock
+                                if (!mounted) return;
+
+                                final result = await showDialog<bool>(
+                                  context: rootContext,
                                   builder:
-                                      (_) => DeleteUserConfirmation(
-                                        user: user,
-                                        onUserDeleted: _loadUsers,
-                                      ),
+                                      (_) => DeleteUserConfirmation(user: user),
                                 );
+
+                                if (result == true && mounted) {
+                                  await _loadUsers();
+                                  CustomFlushbar.show(
+                                    rootContext,
+                                    message: "User deleted successfully",
+                                    type: FlushbarType.success,
+                                  );
+                                }
                               },
                       icon: const Icon(
                         FontAwesomeIcons.trashCan,

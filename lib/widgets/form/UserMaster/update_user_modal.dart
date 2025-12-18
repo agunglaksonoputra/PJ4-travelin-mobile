@@ -9,13 +9,8 @@ import 'package:travelin/utils/handler/UserMaster/error_handler.dart';
 
 class UpdateUserModal extends StatefulWidget {
   final UserModel user;
-  final VoidCallback onUserUpdated;
 
-  const UpdateUserModal({
-    super.key,
-    required this.user,
-    required this.onUserUpdated,
-  });
+  const UpdateUserModal({super.key, required this.user});
 
   @override
   State<UpdateUserModal> createState() => _UpdateUserModalState();
@@ -75,17 +70,8 @@ class _UpdateUserModalState extends State<UpdateUserModal> {
 
       if (!mounted) return;
 
-      CustomFlushbar.show(
-        context,
-        message: "User updated successfully",
-        type: FlushbarType.success,
-      );
-
-      Navigator.pop(context);
-
-      // Delay callback to avoid navigator lock
-      await Future.delayed(const Duration(milliseconds: 100));
-      widget.onUserUpdated();
+      if (!mounted) return;
+      Navigator.pop(context, true); // return success
     } catch (e) {
       if (!mounted) return;
 

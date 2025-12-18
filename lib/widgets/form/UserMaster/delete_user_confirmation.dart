@@ -6,13 +6,8 @@ import 'package:travelin/utils/handler/UserMaster/error_handler.dart';
 
 class DeleteUserConfirmation extends StatefulWidget {
   final UserModel user;
-  final VoidCallback onUserDeleted;
 
-  const DeleteUserConfirmation({
-    super.key,
-    required this.user,
-    required this.onUserDeleted,
-  });
+  const DeleteUserConfirmation({super.key, required this.user});
 
   @override
   State<DeleteUserConfirmation> createState() => _DeleteUserConfirmationState();
@@ -29,17 +24,10 @@ class _DeleteUserConfirmationState extends State<DeleteUserConfirmation> {
 
       if (!mounted) return;
 
-      CustomFlushbar.show(
-        context,
-        message: "User deleted successfully",
-        type: FlushbarType.success,
-      );
-
-      Navigator.pop(context);
-
-      // Delay callback to avoid navigator lock
-      await Future.delayed(const Duration(milliseconds: 100));
-      widget.onUserDeleted();
+      // Pop with return value true = user successfully deleted
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (!mounted) return;
 
@@ -48,10 +36,8 @@ class _DeleteUserConfirmationState extends State<DeleteUserConfirmation> {
         message: UserMasterErrorHandler.parseErrorMessage(e.toString()),
         type: FlushbarType.error,
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+
+      setState(() => _isLoading = false);
     }
   }
 
