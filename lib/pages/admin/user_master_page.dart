@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:travelin/models/user_models.dart';
 import 'package:travelin/services/user_service.dart';
 
 import '../../widgets/vehicle_detail_row.dart';
+import '../../widgets/custom_flushbar.dart';
+import '../../widgets/form/UserMaster/add_user_modal.dart';
+import '../../widgets/form/UserMaster/update_user_modal.dart';
+import '../../widgets/form/UserMaster/delete_user_confirmation.dart';
 
 class UserMasterPage extends StatefulWidget {
   const UserMasterPage({super.key});
@@ -14,18 +19,44 @@ class UserMasterPage extends StatefulWidget {
 
 class _UserMasterPageState extends State<UserMasterPage> {
   List<UserModel> _users = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
+    _getCurrentUserId();
     _loadUsers();
   }
 
-  Future<void> _loadUsers() async {
-    final data = await UserService.getAllUsers();
+  Future<void> _getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _users = data;
+      _currentUserId = prefs.getString("Id");
     });
+  }
+
+  Future<void> _loadUsers() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final data = await UserService.getAllUsers();
+      if (!mounted) return;
+      setState(() {
+        _users = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -46,16 +77,31 @@ class _UserMasterPageState extends State<UserMasterPage> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
-            child: Column(
-              children: _users.map((users) {
-                return _userCard(users);
-              }).toList(),
-            ),
-          ),
-        ),
+        child:
+            _isLoading
+                ? const Center(
+                  child: CircularProgressIndicator(color: Colors.blue),
+                )
+                : _errorMessage != null
+                ? _buildErrorState()
+                : _users.isEmpty
+                ? _buildEmptyState()
+                : RefreshIndicator(
+                  onRefresh: _loadUsers,
+                  color: Colors.blue,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
+                      child: Column(
+                        children:
+                            _users.map((users) {
+                              return _userCard(users);
+                            }).toList(),
+                      ),
+                    ),
+                  ),
+                ),
       ),
 
       floatingActionButton: Padding(
@@ -67,8 +113,22 @@ class _UserMasterPageState extends State<UserMasterPage> {
             backgroundColor: Colors.blue,
             elevation: 5,
             shape: const CircleBorder(),
-            onPressed: () {},
-            child: const Icon(FontAwesomeIcons.add, color: Colors.white, size: 26),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (_) => AddUserModal(onUserAdded: _loadUsers),
+              );
+            },
+            child: const Icon(
+              FontAwesomeIcons.add,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
         ),
       ),
@@ -122,8 +182,8 @@ class _UserMasterPageState extends State<UserMasterPage> {
               VehicleDetailRow(label: "Name", value: user.name),
               VehicleDetailRow(label: "Role", value: user.role),
               VehicleDetailRow(
-                  label: "Status",
-                  value: user.isActive == true ? "Active" : "Inactive"
+                label: "Status",
+                value: user.isActive ? "Active" : "Inactive",
               ),
               const SizedBox(height: 20),
               Row(
@@ -132,7 +192,21 @@ class _UserMasterPageState extends State<UserMasterPage> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        // _showUpdateVehicleModal(vehicle);
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                          ),
+                          builder:
+                              (_) => UpdateUserModal(
+                                user: user,
+                                onUserUpdated: _loadUsers,
+                              ),
+                        );
                       },
                       icon: const Icon(
                         FontAwesomeIcons.pencil,
@@ -151,10 +225,20 @@ class _UserMasterPageState extends State<UserMasterPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // _confirmDeleteVehicle(vehicle);
-                      },
+                      onPressed:
+                          _currentUserId == user.id
+                              ? null
+                              : () {
+                                Navigator.pop(context);
+                                showDialog(
+                                  context: context,
+                                  builder:
+                                      (_) => DeleteUserConfirmation(
+                                        user: user,
+                                        onUserDeleted: _loadUsers,
+                                      ),
+                                );
+                              },
                       icon: const Icon(
                         FontAwesomeIcons.trashCan,
                         color: Colors.white,
@@ -165,7 +249,11 @@ class _UserMasterPageState extends State<UserMasterPage> {
                         style: TextStyle(color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor:
+                            _currentUserId == user.id
+                                ? Colors.grey
+                                : Colors.red,
+                        disabledBackgroundColor: Colors.grey,
                       ),
                     ),
                   ),
@@ -178,4 +266,66 @@ class _UserMasterPageState extends State<UserMasterPage> {
     );
   }
 
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              FontAwesomeIcons.circleExclamation,
+              size: 48,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Error Loading Users',
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _loadUsers,
+              icon: const Icon(FontAwesomeIcons.rotateRight),
+              label: const Text('Try Again'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(FontAwesomeIcons.users, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              'No Users Found',
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start by adding a new user',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
