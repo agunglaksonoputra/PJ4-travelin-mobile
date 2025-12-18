@@ -57,6 +57,38 @@ class TransactionService {
     }
   }
 
+  static Future<double> getTotalPaidAmountClosed() async {
+    final endpoint = '$_resource/paid-amount/closed/total';
+    AppLogger.i('Fetching total paid amount for closed transactions');
+
+    try {
+      final response = await ApiServices.get(_baseUrl, endpoint);
+
+      AppLogger.d('Total paid closed response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+
+      final data = payload['data'];
+      if (data is Map<String, dynamic>) {
+        final raw = data['total_paid_amount'];
+        if (raw is num) return raw.toDouble();
+        if (raw is String) return double.tryParse(raw) ?? 0.0;
+      } else if (data is num) {
+        return data.toDouble();
+      }
+
+      throw Exception('Invalid response format: expected total_paid_amount');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to fetch total paid amount (closed)',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
   static Future<TransactionModel> getTransactionById(int transactionId) async {
     AppLogger.i('Fetching transaction detail for id $transactionId');
 
