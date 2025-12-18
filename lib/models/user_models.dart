@@ -3,6 +3,7 @@ class UserModel {
   final String name;
   final String username;
   final String role;
+  final bool? isActive;
   final String? email;
 
   UserModel({
@@ -10,6 +11,7 @@ class UserModel {
     required this.name,
     required this.username,
     required this.role,
+    this.isActive,
     this.email,
   });
 
@@ -19,6 +21,7 @@ class UserModel {
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       role: json['role'] ?? '',
+      isActive: json['is_active'],
       email: json['email'],
     );
   }
@@ -30,6 +33,7 @@ class UserModel {
       'username': username,
       'role': role,
       if (email != null) 'email': email,
+      if (isActive != null) 'is_active': isActive,
     };
   }
 }
