@@ -19,7 +19,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
-  String username = "Loading...";
+  String name = "Loading...";
   double totalOperationalCost = 0;
   double totalRevenue = 0;
   bool isLoadingCost = true;
@@ -35,14 +35,26 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadUser() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? storedUsername = prefs.getString("username");
+    String? storedName = prefs.getString("name");
 
-    if (storedUsername != null && storedUsername.isNotEmpty) {
-      username = storedUsername;
-    } else {
-      username = await UserService.getUserName();
+    if (storedName != null && storedName.isNotEmpty) {
+      name = storedName;
+      setState(() {});
+      return;
     }
-    setState(() {});
+
+    try {
+      final userProfile = await UserService.getUserProfile();
+      name = userProfile.name;
+      await prefs.setString("name", userProfile.name);
+      setState(() {});
+    } catch (e) {
+      print("Error loading user profile: $e");
+      // Jika user belum login atau error, tampilkan pesan default
+      setState(() {
+        name = "User";
+      });
+    }
   }
 
   Future<void> loadTotalRevenue() async {
@@ -137,7 +149,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         Text(
-                          username,
+                          name,
                           style: const TextStyle(
                             fontSize: 22,
                             color: Colors.black,
