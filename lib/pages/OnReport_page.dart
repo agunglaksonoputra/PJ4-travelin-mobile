@@ -4,6 +4,7 @@ import '../models/vehicle_models.dart';
 import '../widgets/bottom_navbar.dart';
 import '../widgets/vehicle_dropdown.dart';
 import '../widgets/form/OnReport/report_dialog.dart';
+import '../widgets/custom_flushbar.dart';
 import 'package:travelin/services/bookings_service.dart';
 
 class OnReportPage extends StatefulWidget {
@@ -187,8 +188,16 @@ class _OnReportPageState extends State<OnReportPage> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: () {
-                showDialog(
+                showModalBottomSheet<bool>(
                   context: context,
+                  isScrollControlled: true,
+                  isDismissible: true,
+                  backgroundColor: Colors.white,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                  ),
                   builder:
                       (context) => ReportDialog(
                         transaction: tx,
@@ -198,7 +207,16 @@ class _OnReportPageState extends State<OnReportPage> {
                           }
                         },
                       ),
-                );
+                ).then((success) {
+                  if (success == true && mounted) {
+                    _loadTransactionsForVehicle(_selectedVehicle!.id);
+                    CustomFlushbar.show(
+                      context,
+                      message: 'Report berhasil disimpan',
+                      type: FlushbarType.success,
+                    );
+                  }
+                });
               },
               child: const Text(
                 "TRIP REPORT",
