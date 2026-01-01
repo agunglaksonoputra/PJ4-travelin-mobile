@@ -48,6 +48,15 @@ class _AdminPageState extends State<AdminPage> {
                     Navigator.pushNamed(context, '/admin/vehicles');
                   },
                 ),
+                const SizedBox(height: 10),
+                _adminMenuCard(
+                  icon: FontAwesomeIcons.userTag,
+                  title: "Owner Management",
+                  subtitle: "Kelola data owner",
+                  onTap: () {
+                    // Navigator.pushNamed(context, '/admin/vehicles');
+                  },
+                ),
               ],
             ),
           ),
