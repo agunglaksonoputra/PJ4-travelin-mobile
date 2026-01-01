@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:intl/intl.dart';
-import 'package:travelin/pages/homepage.dart';
+import 'package:travelin/models/cashflow/cashflow_year_model.dart';
+import 'package:travelin/pages/report/transaction_list_page.dart';
+import 'package:travelin/utils/currency_utils.dart';
+import 'package:travelin/utils/format_month.dart';
+import '../services/cashflow_service.dart';
+import '../utils/app_logger.dart';
 import '../widgets/bottom_navbar.dart';
-import '../services/report_service.dart';
-import '../models/transaction_models.dart';
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -14,6 +16,34 @@ class ReportPage extends StatefulWidget {
 }
 
 class _ReportPageState extends State<ReportPage> {
+  List<CashFlowYear> _yearData  = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCashFlow();
+  }
+
+  Future<void> _loadCashFlow() async {
+    try {
+      final result = await CashFlowService.getCashFlowSummary(page: 1, limit: 12);
+
+      setState(() {
+        _yearData = result.data;
+        _loading = false;
+      });
+
+      AppLogger.i("CashFlow Loaded: ${result.data.length} years");
+    } catch (e, stack) {
+      AppLogger.e("Error loading cashflow", error: e, stackTrace: stack);
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +52,8 @@ class _ReportPageState extends State<ReportPage> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        scrolledUnderElevation: 0,
         elevation: 0,
         title: const Text(
           "Report",
@@ -29,14 +61,31 @@ class _ReportPageState extends State<ReportPage> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Center(child: Text("Error: $_error"))
+            : _yearData.isEmpty
+            ? const Center(child: Text("Belum ada data"))
+            : SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
             child: Column(
-              children: [
-                buildReportItem(month: "Desember 2025", amount: 35000000),
-                buildReportItem(month: "November 2025", amount: 35000000),
-              ],
+              children: _yearData.expand((year) {
+                return year.months.map((m) {
+                  final parts = m.month.split("-"); // ["2026","01"]
+
+                  return buildReportItem(
+                    year: parts[0],
+                    monthRaw: parts[1],
+                    monthLabel: formatMonth(m.month),
+                    totalCashFlow: m.totalCashFlow,
+                    profit: m.totalProfit,
+                    cashIn: m.totalCashIn,
+                    totalTransactions: m.totalTransactions,
+                  );
+                });
+              }).toList(),
             ),
           ),
         ),
@@ -53,79 +102,235 @@ class _ReportPageState extends State<ReportPage> {
   }
 
   Widget buildReportItem({
-    required String month,
-    required num amount,
-  }) {
-    final formattedAmount = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    ).format(amount);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          )
-        ],
-      ),
-      child: Row(
-        children: [
-          // Icon
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.green.shade600,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              FontAwesomeIcons.calendarCheck,
-              color: Colors.white,
-              size: 20,
+    required String year,
+    required String monthRaw, // "01"
+    required String monthLabel, // "Januari 2026"
+    required num totalCashFlow,
+    required num profit,
+    required num cashIn,
+    required int totalTransactions,
+  })
+  {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TransactionListPage(
+              year: year,
+              month: monthRaw,
             ),
           ),
-
-          const SizedBox(width: 16),
-
-          // Bulan
-          Expanded(
-            child: Text(
-              month,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-
-          // Kanan (Pendapatan + Nominal)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const Text(
-                'Pendapatan',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Section
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blue.shade600,
+                    Colors.blue.shade700,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
                 ),
               ),
-              Text(
-                formattedAmount,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      FontAwesomeIcons.calendarCheck,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          monthLabel,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$totalTransactions transaksi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+
+            // Content Section
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Total Dana Masuk
+                  const Text(
+                    "Total Dana Masuk",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    CurrencyUtils.format(totalCashFlow),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Breakdown Cards
+                  Row(
+                    children: [
+                      // Profit Card
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.green.shade100,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    FontAwesomeIcons.arrowTrendUp,
+                                    color: Colors.green.shade700,
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Profit",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.green.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                CurrencyUtils.format(profit),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      // Deposit Card
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.shade100,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    FontAwesomeIcons.wallet,
+                                    color: Colors.orange.shade700,
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Deposit",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.orange.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                CurrencyUtils.format(cashIn),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
