@@ -90,6 +90,26 @@ class _ReportPageState extends State<ReportPage> {
           ),
         ),
       ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 8, right: 8),
+        child: FloatingActionButton.extended(
+          backgroundColor: Colors.redAccent,
+          elevation: 5,
+          // icon: const Icon(Icons.remove_circle_outline, color: Colors.white),
+          label: const Text(
+            "Withdraw",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          onPressed: () {
+            // TODO: withdraw action
+          },
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
       bottomNavigationBar: BottomNavBar(
         currentIndex: 2,
         onTap: (i) {
