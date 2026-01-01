@@ -627,10 +627,15 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     );
   }
 
-  void _showCreatePaymentDialog(_VehiclePaymentGroup group) {
-    showDialog(
+  Future<void> _showCreatePaymentDialog(_VehiclePaymentGroup group) async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: true,
+      isScrollControlled: true,
+      enableDrag: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder:
           (_) => PaymentDialog(
             transactionId: group.transactionId,
@@ -643,6 +648,10 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
             },
           ),
     );
+
+    if (result == true && mounted) {
+      _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
+    }
   }
 
   List<_VehiclePaymentGroup> _groupPaymentsByTransaction(

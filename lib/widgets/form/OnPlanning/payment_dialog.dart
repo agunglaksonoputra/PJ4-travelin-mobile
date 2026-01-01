@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../models/transaction_models.dart';
 import '../../../services/transaction_service.dart';
 import '../../../utils/currency_input_utils.dart';
@@ -46,10 +47,6 @@ class _PaymentDialogState extends State<PaymentDialog> {
   String? _paymentTypeError;
   bool _isSubmitting = false;
 
-  final TextStyle _labelStyle = const TextStyle(
-    fontWeight: FontWeight.bold,
-    fontSize: 15,
-  );
   final TextStyle _infoStyle = const TextStyle(
     color: Colors.black54,
     fontSize: 13,
@@ -213,15 +210,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
       if (!mounted) return;
 
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
       widget.onPaymentSuccess();
-
-      if (!mounted) return;
-      CustomFlushbar.show(
-        context,
-        message: 'Payment plan updated',
-        type: FlushbarType.success,
-      );
     } catch (error) {
       // Only reset submitting state on error
       // On success, dialog is closed so no need to reset
@@ -240,11 +230,12 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return PopScope(
       canPop: !_isSubmitting,
       onPopInvoked: (didPop) {
         if (!didPop && _isSubmitting) {
-          // Show a message that submission is in progress
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Mohon tunggu, sedang memproses pembayaran...'),
@@ -253,37 +244,40 @@ class _PaymentDialogState extends State<PaymentDialog> {
           );
         }
       },
-      child: AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 16),
-                _buildTransactionInfo(),
-                const SizedBox(height: 14),
-                _buildAmountField(),
-                const SizedBox(height: 12),
-                _buildPaymentMethodField(),
-                const SizedBox(height: 12),
-                _buildPaymentTypeField(),
-                const SizedBox(height: 12),
-                _buildDateField(),
-                const SizedBox(height: 12),
-                _buildNoteField(),
-                const SizedBox(height: 18),
-                _buildActionButtons(),
-              ],
-            ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildHeader(),
+              const SizedBox(height: 16),
+              _buildTransactionInfo(),
+              const SizedBox(height: 14),
+              _buildAmountField(),
+              const SizedBox(height: 12),
+              _buildPaymentMethodField(),
+              const SizedBox(height: 12),
+              _buildPaymentTypeField(),
+              const SizedBox(height: 12),
+              _buildDateField(),
+              const SizedBox(height: 12),
+              _buildNoteField(),
+              const SizedBox(height: 18),
+              _buildActionButtons(),
+            ],
           ),
         ),
       ),
@@ -303,7 +297,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
       children: [
         Text('Perjalanan: ${widget.transaction.tripCode}', style: _infoStyle),
         const SizedBox(height: 4),
-        Text('Pelanggan: ${widget.transaction.customerName}', style: _infoStyle),
+        Text(
+          'Pelanggan: ${widget.transaction.customerName}',
+          style: _infoStyle,
+        ),
       ],
     );
   }
@@ -339,6 +336,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
             hintText: "Masukkan jumlah pembayaran",
             filled: true,
             fillColor: Colors.grey[200],
+            prefixIcon: const Icon(FontAwesomeIcons.moneyBillWave),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -373,6 +371,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
             hintText: "Pilih metode pembayaran",
             filled: true,
             fillColor: Colors.grey[200],
+            prefixIcon: const Icon(FontAwesomeIcons.wallet),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -408,9 +407,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
             dropdownColor: Colors.white,
             decoration: InputDecoration(
               border: InputBorder.none,
+              prefixIcon: const Icon(FontAwesomeIcons.creditCard),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
-                vertical: 4,
+                vertical: 12,
               ),
               errorText: _paymentTypeError,
             ),
@@ -425,6 +425,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
                 _paymentTypeError = null;
               });
             },
+            isExpanded: true,
           ),
         ),
       ],
@@ -447,6 +448,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
             hintText: "Pilih tanggal pembayaran",
             filled: true,
             fillColor: Colors.grey[200],
+            prefixIcon: const Icon(FontAwesomeIcons.calendarDays),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -475,6 +477,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
             hintText: "Masukkan catatan",
             filled: true,
             fillColor: Colors.grey[200],
+            prefixIcon: const Icon(FontAwesomeIcons.noteSticky),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -486,63 +489,34 @@ class _PaymentDialogState extends State<PaymentDialog> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: AbsorbPointer(
-            absorbing: _isSubmitting,
-            child: Opacity(
-              opacity: _isSubmitting ? 0.5 : 1.0,
-              child: ElevatedButton(
-                onPressed:
-                    _isSubmitting ? null : () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isSubmitting ? null : _handleSubmit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          disabledBackgroundColor: Colors.grey,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child:
+            _isSubmitting
+                ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+                : const Text(
+                  "SIMPAN",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                child: const Text("Back"),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _isSubmitting ? null : _handleSubmit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _isSubmitting ? Colors.grey : Colors.teal,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-            ),
-            child:
-                _isSubmitting
-                    ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Text("Processing"),
-                      ],
-                    )
-                    : const Text("Submit"),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

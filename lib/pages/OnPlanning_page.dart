@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../widgets/custom_flushbar.dart';
 import '../models/tariff_model.dart';
 import '../models/transaction_models.dart';
 import '../models/vehicle_models.dart';
@@ -309,10 +310,19 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
     );
   }
 
-  void _showPaymentDialog(BuildContext context, TransactionModel transaction) {
-    showDialog<void>(
+  Future<void> _showPaymentDialog(
+    BuildContext context,
+    TransactionModel transaction,
+  ) async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: false,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (dialogContext) {
         return PaymentDialog(
           transaction: transaction,
@@ -320,5 +330,13 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
         );
       },
     );
+
+    if (result == true && mounted) {
+      CustomFlushbar.show(
+        context,
+        message: 'Payment plan updated',
+        type: FlushbarType.success,
+      );
+    }
   }
 }

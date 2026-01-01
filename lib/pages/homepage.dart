@@ -7,8 +7,8 @@ import '../services/user_service.dart';
 import '../services/report_service.dart';
 import '../services/transaction_service.dart';
 import '../widgets/summary_card.dart';
-import '../widgets/planning_table.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/custom_flushbar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -116,10 +116,26 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openReservasiPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ReservationPage()),
-    );
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => const ReservationPage(),
+    ).then((success) {
+      if (success == true && mounted) {
+        CustomFlushbar.show(
+          context,
+          message: 'Reservasi berhasil dibuat',
+          type: FlushbarType.success,
+        );
+        // Reload data if needed
+        loadTotalRevenue();
+      }
+    });
   }
 
   @override

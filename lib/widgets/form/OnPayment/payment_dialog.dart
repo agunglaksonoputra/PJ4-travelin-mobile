@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../services/payment_service.dart';
 import '../../../utils/currency_input_utils.dart';
@@ -139,15 +140,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
       );
 
       if (!mounted) return;
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
       widget.onPaymentSuccess();
-
-      if (!mounted) return;
-      CustomFlushbar.show(
-        context,
-        message: 'Pembayaran berhasil ditambahkan',
-        type: FlushbarType.success,
-      );
     } catch (error) {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -164,6 +158,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return PopScope(
       canPop: !_isSubmitting,
       onPopInvoked: (didPop) {
@@ -176,31 +172,34 @@ class _PaymentDialogState extends State<PaymentDialog> {
           );
         }
       },
-      child: AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 16),
-                _buildAmountField(),
-                const SizedBox(height: 16),
-                _buildMethodField(),
-                const SizedBox(height: 16),
-                _buildNoteField(),
-                const SizedBox(height: 20),
-                _buildActionButtons(),
-              ],
-            ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildHeader(),
+              const SizedBox(height: 16),
+              _buildAmountField(),
+              const SizedBox(height: 16),
+              _buildMethodField(),
+              const SizedBox(height: 16),
+              _buildNoteField(),
+              const SizedBox(height: 20),
+              _buildActionButtons(),
+            ],
           ),
         ),
       ),
@@ -234,6 +233,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
             hintText: 'Masukkan nominal pembayaran',
             filled: true,
             fillColor: Colors.grey[200],
+            prefixIcon: const Icon(FontAwesomeIcons.moneyBillWave),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -275,6 +275,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
             hintText: 'Pilih metode pembayaran',
             filled: true,
             fillColor: Colors.grey[200],
+            prefixIcon: const Icon(FontAwesomeIcons.wallet),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -304,6 +305,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
             hintText: 'Masukkan catatan',
             filled: true,
             fillColor: Colors.grey[200],
+            prefixIcon: const Icon(FontAwesomeIcons.noteSticky),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -315,63 +317,34 @@ class _PaymentDialogState extends State<PaymentDialog> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: AbsorbPointer(
-            absorbing: _isSubmitting,
-            child: Opacity(
-              opacity: _isSubmitting ? 0.5 : 1.0,
-              child: TextButton(
-                onPressed:
-                    _isSubmitting ? null : () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  'BATAL',
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isSubmitting ? null : _handleSubmit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          disabledBackgroundColor: Colors.grey,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child:
+            _isSubmitting
+                ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                  ),
+                )
+                : const Text(
+                  'SIMPAN',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _isSubmitting ? null : _handleSubmit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.lightBlue,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child:
-                _isSubmitting
-                    ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                    : const Text(
-                      'SIMPAN',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

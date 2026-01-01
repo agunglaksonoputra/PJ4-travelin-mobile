@@ -72,26 +72,42 @@ class _ReservationPageState extends State<ReservationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F3F3),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        title: const Text(
-          'Reservasi',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return PopScope(
+      canPop: !_isSubmitting,
+      onPopInvoked: (didPop) {
+        if (!didPop && _isSubmitting) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sedang memproses reservasi...')),
+          );
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Header
+              const Text(
+                'Reservasi Kendaraan',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 16),
               CustomInputField(
                 label: 'Nama Pelanggan',
                 icon: FontAwesomeIcons.user,
@@ -189,37 +205,45 @@ class _ReservationPageState extends State<ReservationPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlue,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
                   onPressed: _isSubmitting ? null : _submitBooking,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    disabledBackgroundColor: Colors.grey[300],
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                   child:
                       _isSubmitting
-                          ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
+                          ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.blue[600]!,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'MEMPROSES...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           )
                           : const Text(
-                            'Kirim',
+                            'KIRIM',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
                               color: Colors.white,
-                              letterSpacing: 0.5,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                 ),
@@ -399,46 +423,22 @@ class _ReservationPageState extends State<ReservationPage> {
     setState(() => _isSubmitting = true);
     try {
       await BookingService.createBooking(payload);
+
       if (!mounted) return;
-      CustomFlushbar.show(
-        context,
-        message: 'Reservasi berhasil dibuat.',
-        type: FlushbarType.success,
-      );
-      _resetForm();
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        if (!mounted) return;
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-      });
-    } catch (e) {
-      if (!mounted) return;
-      CustomFlushbar.show(
-        context,
-        message: 'Gagal membuat reservasi: $e',
-        type: FlushbarType.error,
-      );
-    } finally {
+
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      // Only reset submitting state on error
       if (mounted) {
         setState(() => _isSubmitting = false);
       }
-    }
-  }
 
-  void _resetForm() {
-    setState(() {
-      _selectedTariff = null;
-      _totalCostOverridden = false;
-      _tariffResetToken++;
-    });
-    customerController.clear();
-    customerPhoneController.clear();
-    leaveDateController.clear();
-    returnDateController.clear();
-    tripCategoryController.clear();
-    destinationController.clear();
-    _settingTotalProgrammatically = true;
-    totalCostController.clear();
-    _settingTotalProgrammatically = false;
-    notesController.clear();
+      if (!mounted) return;
+      CustomFlushbar.show(
+        context,
+        message: error.toString(),
+        type: FlushbarType.error,
+      );
+    }
   }
 }
