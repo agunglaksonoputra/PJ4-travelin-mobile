@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:travelin/models/cashflow/cashflow_year_model.dart';
 import 'package:travelin/pages/report/transaction_list_page.dart';
+import 'package:travelin/pages/withdraw/withdraw_page.dart';
 import 'package:travelin/utils/currency_utils.dart';
 import 'package:travelin/utils/format_month.dart';
 import '../services/cashflow_service.dart';
@@ -104,7 +105,12 @@ class _ReportPageState extends State<ReportPage> {
             ),
           ),
           onPressed: () {
-            // TODO: withdraw action
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const WithdrawPage(),
+              ),
+            );
           },
         ),
       ),
