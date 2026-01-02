@@ -17,10 +17,10 @@ class OwnerWithdrawalService {
     int page = 1,
     int limit = 10,
   }) async {
-    AppLogger.i("GET $_baseUrl/owner-withdrawals");
+    AppLogger.i("GET $_baseUrl/owners/withdrawals");
 
     try {
-      String endpoint = "owner-withdrawals?page=$page&limit=$limit";
+      String endpoint = "owners/withdrawals?page=$page&limit=$limit";
       if (ownerId != null) endpoint += "&owner_id=$ownerId";
 
       final resp = await ApiServices.get(_baseUrl, endpoint);
@@ -90,4 +90,32 @@ class OwnerWithdrawalService {
       throw Exception("Failed to create owner withdrawal: $e");
     }
   }
+
+  /// ===============================
+  /// REFUND OWNER WITHDRAWAL
+  /// PUT /owners/withdrawals/:id/refund
+  /// ===============================
+  static Future<OwnerWithdrawalModel> refundWithdrawal({
+    required int withdrawalId,
+  }) async {
+    AppLogger.i("PUT $_baseUrl/owners/withdrawals/$withdrawalId/refund");
+
+    try {
+      final resp = await ApiServices.put(
+        _baseUrl,
+        "owners/withdrawals/$withdrawalId/refund",
+        {},
+      );
+
+      return OwnerWithdrawalModel.fromJson(resp['data']);
+    } catch (e, stack) {
+      AppLogger.e(
+        "Failed to refund owner withdrawal",
+        error: e,
+        stackTrace: stack,
+      );
+      throw Exception("Failed to refund owner withdrawal: $e");
+    }
+  }
+
 }

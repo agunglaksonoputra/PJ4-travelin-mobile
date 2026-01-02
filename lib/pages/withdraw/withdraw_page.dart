@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:travelin/pages/withdraw/withdraw_log_page.dart';
 import 'package:travelin/services/owner/owner_balance_service.dart';
 import 'package:travelin/utils/currency_utils.dart';
 
@@ -73,10 +74,10 @@ class _WithdrawPageState extends State<WithdrawPage> {
             ),
             onPressed: () {
               // TODO: navigate ke halaman withdraw log
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (_) => const WithdrawLogPage()),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WithdrawLogPage()),
+              );
             },
           ),
         ],
