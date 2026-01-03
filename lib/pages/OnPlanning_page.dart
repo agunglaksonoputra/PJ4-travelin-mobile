@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/custom_flushbar.dart';
 import '../models/tariff_model.dart';
 import '../models/transaction_models.dart';
@@ -62,13 +63,14 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 1,
+        role: AuthHelper.currentRole,
         onTap: (index) {
           switch (index) {
             case 0:
               Navigator.pushReplacementNamed(context, '/home');
               break;
             case 1:
-              Navigator.pushReplacementNamed(context, '/actual');
+            // already on actual
               break;
             case 2:
               Navigator.pushReplacementNamed(context, '/report');

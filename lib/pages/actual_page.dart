@@ -6,7 +6,9 @@ import '../models/vehicle_models.dart';
 import '../models/transaction_summary_model.dart';
 import '../services/vehicle_service.dart';
 import '../services/transaction_service.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/custom_flushbar.dart';
 
 class ActualPage extends StatefulWidget {
   const ActualPage({super.key});
@@ -149,17 +151,23 @@ class _ActualPageState extends State<ActualPage> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 1,
+        role: AuthHelper.currentRole,
         onTap: (index) {
           switch (index) {
             case 0:
               Navigator.pushReplacementNamed(context, '/home');
               break;
+
             case 1:
+            // already on actual
               break;
+
             case 2:
               Navigator.pushReplacementNamed(context, '/report');
               break;
+
             case 3:
+            // index ini HANYA ADA JIKA ADMIN
               Navigator.pushReplacementNamed(context, '/admin');
               break;
           }

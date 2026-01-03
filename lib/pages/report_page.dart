@@ -7,7 +7,9 @@ import 'package:travelin/utils/currency_utils.dart';
 import 'package:travelin/utils/format_month.dart';
 import '../services/cashflow_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/custom_flushbar.dart';
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -20,6 +22,11 @@ class _ReportPageState extends State<ReportPage> {
   List<CashFlowYear> _yearData  = [];
   bool _loading = true;
   String? _error;
+
+  bool get canWithdraw {
+    return AuthHelper.currentRole == 'admin' ||
+        AuthHelper.currentRole == 'owner';
+  }
 
   @override
   void initState() {
@@ -91,12 +98,12 @@ class _ReportPageState extends State<ReportPage> {
           ),
         ),
       ),
-      floatingActionButton: Padding(
+      floatingActionButton: canWithdraw
+          ? Padding(
         padding: const EdgeInsets.only(bottom: 8, right: 8),
         child: FloatingActionButton.extended(
           backgroundColor: Colors.redAccent,
           elevation: 5,
-          // icon: const Icon(Icons.remove_circle_outline, color: Colors.white),
           label: const Text(
             "Withdraw",
             style: TextStyle(
@@ -113,17 +120,37 @@ class _ReportPageState extends State<ReportPage> {
             );
           },
         ),
-      ),
+      )
+          : null,
+
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
       bottomNavigationBar: BottomNavBar(
         currentIndex: 2,
-        onTap: (i) {
-          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (i == 1) Navigator.pushReplacementNamed(context, '/actual');
-          if (i == 3) Navigator.pushReplacementNamed(context, '/admin');
+        role: AuthHelper.currentRole, // atau state role kamu
+        onTap: (i) async {
+          if (i == 0) {
+            Navigator.pushReplacementNamed(context, '/home');
+            return;
+          }
+
+          if (i == 1) {
+            Navigator.pushReplacementNamed(context, '/actual');
+            return;
+          }
+
+          if (i == 2) {
+            // already on report
+            return;
+          }
+
+          // index 3 HANYA AKAN ADA JIKA ADMIN
+          if (i == 3) {
+            Navigator.pushReplacementNamed(context, '/admin');
+          }
         },
       ),
+
     );
   }
 

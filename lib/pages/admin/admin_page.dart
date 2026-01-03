@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+import '../../utils/auth_helper.dart';
 import '../../widgets/bottom_navbar.dart';
 
 class AdminPage extends StatefulWidget {
@@ -63,13 +64,25 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 3,
+        currentIndex: 2, // Report
+        role: AuthHelper.currentRole,
         onTap: (i) {
-          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (i == 1) Navigator.pushReplacementNamed(context, '/actual');
-          if (i == 2) Navigator.pushReplacementNamed(context, '/report');
+          switch (i) {
+            case 0:
+              Navigator.pushReplacementNamed(context, '/home');
+              break;
+
+            case 1:
+              Navigator.pushReplacementNamed(context, '/actual');
+              break;
+
+            case 2:
+            // already on report
+              break;
+          }
         },
       ),
+
     );
   }
 

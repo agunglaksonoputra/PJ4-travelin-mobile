@@ -6,6 +6,7 @@ import 'package:travelin/pages/reservation_page.dart';
 import '../services/user_service.dart';
 import '../services/report_service.dart';
 import '../services/transaction_service.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/bottom_navbar.dart';
 import '../widgets/custom_flushbar.dart';
@@ -98,17 +99,22 @@ class _HomePageState extends State<HomePage> {
     return formatter.format(amount);
   }
 
-  void onItemTapped(int index) {
+  Future<void> onItemTapped(int index) async {
     setState(() => selectedIndex = index);
+
     switch (index) {
       case 0:
+      // stay on home
         break;
+
       case 1:
         Navigator.pushReplacementNamed(context, '/actual');
         break;
+
       case 2:
         Navigator.pushReplacementNamed(context, '/report');
         break;
+
       case 3:
         Navigator.pushReplacementNamed(context, '/admin');
         break;
@@ -281,6 +287,7 @@ class _HomePageState extends State<HomePage> {
       // BOTTOM NAVBAR
       bottomNavigationBar: BottomNavBar(
         currentIndex: selectedIndex,
+        role: AuthHelper.currentRole,
         onTap: onItemTapped,
       ),
     );

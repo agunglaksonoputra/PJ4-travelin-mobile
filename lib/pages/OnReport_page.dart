@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/vehicle_models.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/bottom_navbar.dart';
 import '../widgets/vehicle_dropdown.dart';
 import '../widgets/form/OnReport/report_dialog.dart';
@@ -111,10 +112,19 @@ class _OnReportPageState extends State<OnReportPage> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 2,
+        role: AuthHelper.currentRole, // ⬅️ penting
         onTap: (i) {
-          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (i == 1) Navigator.pushReplacementNamed(context, '/actual');
-          if (i == 2) Navigator.pushReplacementNamed(context, '/report');
+          switch (i) {
+            case 0:
+              Navigator.pushReplacementNamed(context, '/home');
+              break;
+            case 1:
+              Navigator.pushReplacementNamed(context, '/actual');
+              break;
+            case 2:
+            // already on report
+              break;
+          }
         },
       ),
     );

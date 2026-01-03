@@ -4,6 +4,7 @@ import '../models/payment_models.dart';
 import '../models/vehicle_models.dart';
 import '../services/payment_service.dart';
 import '../services/vehicle_service.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/bottom_navbar.dart';
 import '../widgets/custom_flushbar.dart';
 import '../widgets/form/OnPayment/payment_dialog.dart';
@@ -72,16 +73,17 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 1,
+        role: AuthHelper.currentRole,
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.pushNamed(context, '/home');
+              Navigator.pushReplacementNamed(context, '/home');
               break;
             case 1:
-              Navigator.pushNamed(context, '/actual');
+            // already on actual
               break;
             case 2:
-              Navigator.pushNamed(context, '/report');
+              Navigator.pushReplacementNamed(context, '/report');
               break;
           }
         },
