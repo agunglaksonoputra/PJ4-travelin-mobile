@@ -1,5 +1,6 @@
 import '../config/api_config.dart';
 import '../models/transaction_models.dart';
+import '../models/transaction_summary_model.dart';
 import '../utils/app_logger.dart';
 import 'api_services.dart';
 
@@ -56,6 +57,38 @@ class TransactionService {
     }
   }
 
+  static Future<double> getTotalPaidAmountClosed() async {
+    final endpoint = '$_resource/paid-amount/closed/total';
+    AppLogger.i('Fetching total paid amount for closed transactions');
+
+    try {
+      final response = await ApiServices.get(_baseUrl, endpoint);
+
+      AppLogger.d('Total paid closed response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+
+      final data = payload['data'];
+      if (data is Map<String, dynamic>) {
+        final raw = data['total_paid_amount'];
+        if (raw is num) return raw.toDouble();
+        if (raw is String) return double.tryParse(raw) ?? 0.0;
+      } else if (data is num) {
+        return data.toDouble();
+      }
+
+      throw Exception('Invalid response format: expected total_paid_amount');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to fetch total paid amount (closed)',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
   static Future<TransactionModel> getTransactionById(int transactionId) async {
     AppLogger.i('Fetching transaction detail for id $transactionId');
 
@@ -96,10 +129,10 @@ class TransactionService {
 
       AppLogger.d('Create transaction response: $response');
 
-      final payload = _asMap(response);
-      _ensureSuccess(payload);
+      final responsePayload = _asMap(response);
+      _ensureSuccess(responsePayload);
 
-      final body = payload['data'];
+      final body = responsePayload['data'];
       if (body is Map<String, dynamic>) {
         return TransactionModel.fromJson(body);
       }
@@ -130,10 +163,10 @@ class TransactionService {
 
       AppLogger.d('Update transaction response: $response');
 
-      final payload = _asMap(response);
-      _ensureSuccess(payload);
+      final responsePayload = _asMap(response);
+      _ensureSuccess(responsePayload);
 
-      final body = payload['data'];
+      final body = responsePayload['data'];
       if (body is Map<String, dynamic>) {
         return TransactionModel.fromJson(body);
       }
@@ -158,20 +191,75 @@ class TransactionService {
     );
 
     try {
+      // Normalize currency inputs: allow strings like "Rp 1.250.000" or "1,250,000"
+      Map<String, dynamic> payload = Map<String, dynamic>.from(data);
+      double? _normalizeAmount(dynamic v) {
+        if (v == null) return null;
+        if (v is num) return v.toDouble();
+        if (v is String) {
+          // Keep only digits and separators
+          String cleaned = v.replaceAll(RegExp(r'[^0-9.,]'), '');
+          final hasComma = cleaned.contains(',');
+          final hasDot = cleaned.contains('.');
+
+          String numStr = cleaned;
+          if (hasComma && hasDot) {
+            // Assume Indonesian format: dot thousands, comma decimal
+            numStr = cleaned.replaceAll('.', '');
+            numStr = numStr.replaceFirst(',', '.');
+          } else if (hasComma && !hasDot) {
+            // Only comma -> treat as decimal separator
+            numStr = cleaned.replaceFirst(',', '.');
+          } else if (!hasComma && hasDot) {
+            // Only dot -> assume dot as decimal separator (leave as is)
+            numStr = cleaned;
+          } else {
+            // Digits only
+            numStr = cleaned;
+          }
+          return double.tryParse(numStr);
+        }
+        return null;
+      }
+
+      double? normalized;
+      if (payload.containsKey('paid_amount')) {
+        normalized = _normalizeAmount(payload['paid_amount']);
+        if (normalized != null) payload['paid_amount'] = normalized;
+      } else if (payload.containsKey('amount')) {
+        normalized = _normalizeAmount(payload['amount']);
+        if (normalized != null) payload['amount'] = normalized;
+      }
+
+      if (normalized == null || normalized <= 0) {
+        throw Exception('Nominal pembayaran tidak valid');
+      }
+
       final response = await ApiServices.post(
         _baseUrl,
         '$_resource/$transactionId/payment-plan',
-        data,
+        payload,
       );
 
       AppLogger.d('Set payment plan response: $response');
 
-      final payload = _asMap(response);
-      _ensureSuccess(payload);
+      final responsePayload = _asMap(response);
+      _ensureSuccess(responsePayload);
 
-      final body = payload['data'];
+      final body = responsePayload['data'];
       if (body is Map<String, dynamic>) {
-        return TransactionModel.fromJson(body);
+        // Parse initial update result
+        final updated = TransactionModel.fromJson(body);
+        try {
+          // Move status to 'payment' after recording payment
+          final moved = await updateTransaction(transactionId, {
+            'status': 'payment',
+          });
+          return moved;
+        } catch (_) {
+          // If status update fails, return payment-plan updated transaction
+          return updated;
+        }
       }
 
       throw Exception('Invalid response format: expected object in data field');
@@ -201,6 +289,42 @@ class TransactionService {
     } catch (e, stackTrace) {
       AppLogger.e(
         'Failed to delete transaction',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  static Future<List<TransactionSummaryModel>> getTransactionSummary({
+    int? vehicleId,
+  }) async {
+    final query = _buildQuery({'vehicle_id': vehicleId});
+    final endpoint =
+        query.isEmpty ? '$_resource/summary' : '$_resource/summary?$query';
+
+    AppLogger.i('Fetching transaction summary with vehicleId=$vehicleId');
+
+    try {
+      final response = await ApiServices.get(_baseUrl, endpoint);
+
+      AppLogger.d('Transaction summary response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+
+      final data = payload['data'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(TransactionSummaryModel.fromJson)
+            .toList();
+      }
+
+      throw Exception('Invalid response format: expected list in data field');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to fetch transaction summary',
         error: e,
         stackTrace: stackTrace,
       );

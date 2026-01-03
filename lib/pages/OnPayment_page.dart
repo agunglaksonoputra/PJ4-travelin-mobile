@@ -4,8 +4,10 @@ import '../models/payment_models.dart';
 import '../models/vehicle_models.dart';
 import '../services/payment_service.dart';
 import '../services/vehicle_service.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/bottom_navbar.dart';
 import '../widgets/custom_flushbar.dart';
+import '../widgets/form/OnPayment/payment_dialog.dart';
 
 class OnPaymentPage extends StatefulWidget {
   const OnPaymentPage({super.key});
@@ -71,16 +73,17 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 1,
+        role: AuthHelper.currentRole,
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.pushNamed(context, '/home');
+              Navigator.pushReplacementNamed(context, '/home');
               break;
             case 1:
-              Navigator.pushNamed(context, '/actual');
+            // already on actual
               break;
             case 2:
-              Navigator.pushNamed(context, '/report');
+              Navigator.pushReplacementNamed(context, '/report');
               break;
           }
         },
@@ -237,16 +240,18 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     return ListView.separated(
       itemCount: _paymentGroups.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) => _buildPaymentCard(_paymentGroups[index]),
+      itemBuilder:
+          (context, index) => _buildPaymentCard(_paymentGroups[index], index),
     );
   }
 
-  Widget _buildPaymentCard(_VehiclePaymentGroup group) {
+  Widget _buildPaymentCard(_VehiclePaymentGroup group, int index) {
     final summary = group.transaction;
-    final title =
+    final tripLabel =
         summary?.tripCode?.isNotEmpty == true
-            ? 'Trip ${summary!.tripCode}'
-            : 'Transaksi #${group.transactionId}';
+            ? summary!.tripCode
+            : '#${group.transactionId}';
+    final title = '$tripLabel';
     final customerName =
         summary?.customerName?.isNotEmpty == true ? summary!.customerName : '-';
     final totalCost = summary?.totalCost;
@@ -254,6 +259,7 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     final remaining = group.remainingAmount;
     final latest = group.latestPayment;
     final latestDate = _formatDate(latest?.paidAt);
+    final isPaidOff = remaining != null && remaining <= 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -280,11 +286,6 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
             'Customer: $customerName',
             style: const TextStyle(color: Colors.black87),
           ),
-          if (summary?.status != null)
-            Text(
-              'Status: ${summary!.status}',
-              style: const TextStyle(color: Colors.black54),
-            ),
           const Divider(height: 20, thickness: 1, color: Colors.black12),
           if (totalCost != null) Text('Total: ${_formatCurrency(totalCost)}'),
           Text('Dibayar: ${_formatCurrency(totalPaid)}'),
@@ -323,16 +324,18 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
               Expanded(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlue,
+                    backgroundColor:
+                        isPaidOff ? Colors.grey[400] : Colors.lightBlue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  onPressed: () => _showCreatePaymentDialog(group),
-                  child: const Text(
-                    'PAYMENT',
-                    style: TextStyle(
+                  onPressed:
+                      isPaidOff ? null : () => _showCreatePaymentDialog(group),
+                  child: Text(
+                    isPaidOff ? 'LUNAS' : 'PAYMENT',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -626,127 +629,31 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     );
   }
 
-  void _showCreatePaymentDialog(_VehiclePaymentGroup group) {
-    final amountController = TextEditingController(
-      text:
-          group.remainingAmount != null && group.remainingAmount! > 0
-              ? group.remainingAmount!.toStringAsFixed(0)
-              : '',
-    );
-    final noteController = TextEditingController();
-    String method = 'cash';
-    bool isSubmitting = false;
-
-    showDialog(
+  Future<void> _showCreatePaymentDialog(_VehiclePaymentGroup group) async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            Future<void> submit() async {
-              final rawAmount = amountController.text.trim();
-              final amount = double.tryParse(rawAmount);
-
-              if (amount == null || amount <= 0) {
-                _showErrorFlushbar('Masukkan nominal pembayaran yang valid');
-                return;
+      isScrollControlled: true,
+      enableDrag: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (_) => PaymentDialog(
+            transactionId: group.transactionId,
+            remainingAmount: group.remainingAmount,
+            onPaymentSuccess: () async {
+              final selectedVehicle = _selectedVehicle;
+              if (selectedVehicle != null) {
+                await _loadPayments(selectedVehicle.id);
               }
-
-              setModalState(() => isSubmitting = true);
-
-              try {
-                await PaymentService.createPayment(
-                  transactionId: group.transactionId,
-                  amount: amount,
-                  method: method,
-                  note:
-                      noteController.text.trim().isEmpty
-                          ? null
-                          : noteController.text.trim(),
-                );
-
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
-                final selectedVehicle = _selectedVehicle;
-                if (selectedVehicle != null) {
-                  await _loadPayments(selectedVehicle.id);
-                }
-              } catch (e) {
-                if (!mounted) return;
-                _showErrorFlushbar(e.toString());
-              } finally {
-                if (context.mounted) {
-                  setModalState(() => isSubmitting = false);
-                }
-              }
-            }
-
-            return AlertDialog(
-              title: const Text('Tambah Pembayaran'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: amountController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Nominal',
-                      prefixText: 'Rp ',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: method,
-                    decoration: const InputDecoration(labelText: 'Metode'),
-                    items: const [
-                      DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                      DropdownMenuItem(
-                        value: 'transfer',
-                        child: Text('Transfer'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setModalState(() => method = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: noteController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Catatan (opsional)',
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed:
-                      isSubmitting ? null : () => Navigator.of(context).pop(),
-                  child: const Text('BATAL'),
-                ),
-                ElevatedButton(
-                  onPressed: isSubmitting ? null : submit,
-                  child:
-                      isSubmitting
-                          ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Text('SIMPAN'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+            },
+          ),
     );
+
+    if (result == true && mounted) {
+      _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
+    }
   }
 
   List<_VehiclePaymentGroup> _groupPaymentsByTransaction(

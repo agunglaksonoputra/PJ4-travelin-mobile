@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:travelin/widgets/trip_card.dart';
+import 'package:intl/intl.dart';
 import '../models/vehicle_models.dart';
+import '../models/transaction_summary_model.dart';
 import '../services/vehicle_service.dart';
+import '../services/transaction_service.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/custom_flushbar.dart';
 
 class ActualPage extends StatefulWidget {
   const ActualPage({super.key});
@@ -13,8 +18,10 @@ class ActualPage extends StatefulWidget {
 }
 
 class _ActualPageState extends State<ActualPage> {
-  String selectedVehicle = "";
-  List<String> vehicleList = [];
+  VehicleModel? selectedVehicle;
+  List<VehicleModel> vehicleList = [];
+  Map<String, TransactionSummaryModel> summaryByStatus = {};
+  bool isLoadingSummary = false;
 
   bool isDropdownOpen = false;
 
@@ -32,13 +39,46 @@ class _ActualPageState extends State<ActualPage> {
       final List<VehicleModel> vehicles = await VehicleService.getVehicles();
 
       setState(() {
-        vehicleList =
-            vehicles.map<String>((vehicle) => _vehicleLabel(vehicle)).toList();
-
-        selectedVehicle = vehicleList.isNotEmpty ? vehicleList.first : "";
+        vehicleList = vehicles;
+        selectedVehicle = vehicles.isNotEmpty ? vehicles.first : null;
       });
+
+      if (selectedVehicle != null) {
+        await _loadSummaryForVehicle(selectedVehicle!.id);
+      }
     } catch (e) {
       debugPrint("Error load vehicle: $e");
+    }
+  }
+
+  Future<void> _loadSummaryForVehicle(int vehicleId) async {
+    setState(() {
+      isLoadingSummary = true;
+      summaryByStatus = {};
+    });
+
+    try {
+      final summaries = await TransactionService.getTransactionSummary(
+        vehicleId: vehicleId,
+      );
+      debugPrint("=== Transaction Summary Debug ===");
+      debugPrint("Summaries received: $summaries");
+      for (final item in summaries) {
+        debugPrint(
+          "Status: ${item.status}, TripCount: ${item.tripCount}, Amount: ${item.totalAmount}",
+        );
+      }
+      setState(() {
+        summaryByStatus = {for (final item in summaries) item.status: item};
+      });
+    } catch (e) {
+      debugPrint("Error load summary: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingSummary = false;
+        });
+      }
     }
   }
 
@@ -62,55 +102,73 @@ class _ActualPageState extends State<ActualPage> {
             _buildVehicleDropdown(),
             const SizedBox(height: 20),
             Expanded(
-              child: ListView(
-                children: [
-                  TripCard(
-                    title: "On Planning",
-                    trip: 20,
-                    amount: "20.000.000",
-                    icon: FontAwesomeIcons.clipboardList,
-                    onTap: () => Navigator.pushNamed(context, '/OnPlanning'),
-                  ),
-                  TripCard(
-                    title: "On Progress of Payment",
-                    trip: 15,
-                    amount: "10.000.000",
-                    icon: FontAwesomeIcons.moneyBillWave,
-                    onTap:
-                        () =>
-                            Navigator.pushNamed(context, '/OnPayment_progress'),
-                  ),
-                  TripCard(
-                    title: "On Progress of Report",
-                    trip: 12,
-                    amount: "8.500.000",
-                    icon: FontAwesomeIcons.fileLines,
-                    onTap: () => Navigator.pushNamed(context, '/OnReport'),
-                  ),
-                  TripCard(
-                    title: "Closed",
-                    trip: 25,
-                    amount: "25.000.000",
-                    icon: FontAwesomeIcons.circleCheck,
-                    onTap: () => Navigator.pushNamed(context, '/report'),
-                  ),
-                ],
-              ),
+              child:
+                  isLoadingSummary
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView(
+                        children: [
+                          TripCard(
+                            title: "On Planning",
+                            trip: _tripCount('planning'),
+                            amount: _formattedAmount('planning'),
+                            icon: FontAwesomeIcons.clipboardList,
+                            onTap:
+                                () =>
+                                    Navigator.pushNamed(context, '/OnPlanning'),
+                          ),
+                          TripCard(
+                            title: "On Progress of Payment",
+                            trip: _tripCount('payment'),
+                            amount: _formattedAmount('payment'),
+                            icon: FontAwesomeIcons.moneyBillWave,
+                            onTap:
+                                () => Navigator.pushNamed(
+                                  context,
+                                  '/OnPayment_progress',
+                                ),
+                          ),
+                          TripCard(
+                            title: "On Progress of Report",
+                            trip: _tripCount('reporting'),
+                            amount: _formattedAmount('reporting'),
+                            icon: FontAwesomeIcons.fileLines,
+                            onTap:
+                                () => Navigator.pushNamed(context, '/OnReport'),
+                          ),
+                          TripCard(
+                            title: "Closed",
+                            trip: _tripCount('closed'),
+                            amount: _formattedAmount('closed'),
+                            icon: FontAwesomeIcons.circleCheck,
+                            onTap:
+                                () => Navigator.pushNamed(context, '/report'),
+                          ),
+                        ],
+                      ),
             ),
           ],
         ),
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 1,
+        role: AuthHelper.currentRole,
         onTap: (index) {
           switch (index) {
             case 0:
               Navigator.pushReplacementNamed(context, '/home');
               break;
+
             case 1:
+            // already on actual
               break;
+
             case 2:
               Navigator.pushReplacementNamed(context, '/report');
+              break;
+
+            case 3:
+            // index ini HANYA ADA JIKA ADMIN
+              Navigator.pushReplacementNamed(context, '/admin');
               break;
           }
         },
@@ -151,9 +209,7 @@ class _ActualPageState extends State<ActualPage> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      selectedVehicle.isNotEmpty
-                          ? selectedVehicle
-                          : "Select Vehicle",
+                      _vehicleLabelAny(selectedVehicle),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -188,12 +244,14 @@ class _ActualPageState extends State<ActualPage> {
             child: Column(
               children:
                   vehicleList.map((vehicle) {
+                    final isSelected = vehicle.id == selectedVehicle?.id;
                     return InkWell(
-                      onTap: () {
+                      onTap: () async {
                         setState(() {
                           selectedVehicle = vehicle;
                           isDropdownOpen = false;
                         });
+                        await _loadSummaryForVehicle(vehicle.id);
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -205,14 +263,12 @@ class _ActualPageState extends State<ActualPage> {
                             const Icon(Icons.directions_bus, size: 18),
                             const SizedBox(width: 8),
                             Text(
-                              vehicle,
+                              _vehicleLabelAny(vehicle),
                               style: TextStyle(
                                 color:
-                                    vehicle == selectedVehicle
-                                        ? Colors.blue
-                                        : Colors.black87,
+                                    isSelected ? Colors.blue : Colors.black87,
                                 fontWeight:
-                                    vehicle == selectedVehicle
+                                    isSelected
                                         ? FontWeight.bold
                                         : FontWeight.normal,
                               ),
@@ -235,5 +291,22 @@ class _ActualPageState extends State<ActualPage> {
       vehicle.plateNumber,
     ];
     return parts.join(' ').trim();
+  }
+
+  String _vehicleLabelAny(dynamic vehicle) {
+    if (vehicle is VehicleModel) {
+      return _vehicleLabel(vehicle);
+    }
+    return "Select Vehicle";
+  }
+
+  int _tripCount(String status) {
+    return summaryByStatus[status]?.tripCount ?? 0;
+  }
+
+  String _formattedAmount(String status) {
+    final amount = summaryByStatus[status]?.totalAmount ?? 0;
+    final formatter = NumberFormat.decimalPattern('id_ID');
+    return formatter.format(amount);
   }
 }

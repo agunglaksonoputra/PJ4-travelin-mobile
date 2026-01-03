@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../models/vehicle_models.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/vehicle_dropdown.dart';
+import '../widgets/form/OnReport/report_dialog.dart';
+import '../widgets/custom_flushbar.dart';
+import 'package:travelin/services/bookings_service.dart';
 
 class OnReportPage extends StatefulWidget {
   const OnReportPage({super.key});
@@ -9,23 +16,52 @@ class OnReportPage extends StatefulWidget {
 }
 
 class _OnReportPageState extends State<OnReportPage> {
-  String selectedVehicle = "Vehicle 1";
-  bool isDropdownOpen = false;
+  VehicleModel? _selectedVehicle;
 
-  final List<String> vehicleList = [
-    "Vehicle 1",
-    "Vehicle 2",
-    "Vehicle 3",
-    "Vehicle 4",
-  ];
+  List<dynamic> transactions = [];
+  bool isLoadingTransactions = false;
+  String? transactionError;
 
-  // Controller form popup
-  final TextEditingController kmStartController = TextEditingController();
-  final TextEditingController kmEndController = TextEditingController();
-  final TextEditingController driverFeeController = TextEditingController();
-  final TextEditingController gasolineController = TextEditingController();
-  final TextEditingController destinationController = TextEditingController();
-  final TextEditingController othersController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Future<void> _loadTransactionsForVehicle(int vehicleId) async {
+    setState(() {
+      isLoadingTransactions = true;
+      transactionError = null;
+      transactions = [];
+    });
+
+    try {
+      final allTxs = await BookingService.getTransactionsByVehicle(vehicleId);
+
+      // Filter only transactions with 'reporting' status
+      final txs =
+          allTxs
+              .where(
+                (t) =>
+                    t is Map && (t['status'] ?? '').toString() == 'reporting',
+              )
+              .toList();
+
+      if (!mounted) return;
+      setState(() {
+        transactions = txs;
+        isLoadingTransactions = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        transactionError = e.toString();
+        isLoadingTransactions = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,42 +69,52 @@ class _OnReportPageState extends State<OnReportPage> {
       backgroundColor: const Color(0xFFF3F3F3),
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 1,
         title: const Text(
           "On Report",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacementNamed(context, '/actual');
-          },
+          onPressed: () => Navigator.pushReplacementNamed(context, '/actual'),
         ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildVehicleDropdown(),
+            VehicleDropdown(
+              showLabel: false,
+              initialVehicle: _selectedVehicle,
+              onChanged: (vehicle) {
+                setState(() {
+                  _selectedVehicle = vehicle;
+                });
+                _loadTransactionsForVehicle(vehicle.id);
+              },
+            ),
             const SizedBox(height: 20),
             Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: 3,
-                itemBuilder: (context, index) =>
-                    _buildReportCard(context, index),
-              ),
+              child:
+                  transactions.isEmpty
+                      ? Center(
+                        child: Text(
+                          'Tidak ada transaksi dengan status reporting',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      )
+                      : ListView.builder(
+                        itemCount: transactions.length,
+                        itemBuilder: (c, i) => _buildReportCard(c, i),
+                      ),
             ),
           ],
         ),
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 2,
-        onTap: (index) {
-          switch (index) {
+        role: AuthHelper.currentRole, // ⬅️ penting
+        onTap: (i) {
+          switch (i) {
             case 0:
               Navigator.pushReplacementNamed(context, '/home');
               break;
@@ -76,7 +122,7 @@ class _OnReportPageState extends State<OnReportPage> {
               Navigator.pushReplacementNamed(context, '/actual');
               break;
             case 2:
-              Navigator.pushReplacementNamed(context, '/report');
+            // already on report
               break;
           }
         },
@@ -84,104 +130,35 @@ class _OnReportPageState extends State<OnReportPage> {
     );
   }
 
-  Widget _buildVehicleDropdown() {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => isDropdownOpen = !isDropdownOpen),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.directions_bus, color: Colors.black),
-                    const SizedBox(width: 8),
-                    Text(
-                      selectedVehicle,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-                Icon(
-                  isDropdownOpen
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  color: Colors.black,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (isDropdownOpen)
-          Container(
-            margin: const EdgeInsets.only(top: 6),
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 6,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Column(
-              children: vehicleList.map((vehicle) {
-                final isSelected = vehicle == selectedVehicle;
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      selectedVehicle = vehicle;
-                      isDropdownOpen = false;
-                    });
-                  },
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.directions_bus,
-                            color: Colors.black54, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          vehicle,
-                          style: TextStyle(
-                            color: isSelected ? Colors.blue : Colors.black87,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
+  Widget _buildReportCard(BuildContext context, int index) {
+    final tx = transactions[index];
+    final customer =
+        (tx is Map && tx['customer_name'] != null)
+            ? tx['customer_name'].toString()
+            : '—';
+    final tripCode =
+        (tx is Map && (tx['trip_code'] ?? tx['tripCode']) != null)
+            ? (tx['trip_code'] ?? tx['tripCode']).toString()
+            : null;
+    final totalPayment =
+        (tx is Map && tx['total_cost'] != null)
+            ? double.tryParse(tx['total_cost'].toString()) ?? 0.0
+            : 0.0;
+    final dateStr =
+        (tx is Map && (tx['start_date'] ?? tx['created_at']) != null)
+            ? (() {
+              try {
+                return DateFormat('dd/MM/yyyy').format(
+                  DateTime.parse(
+                    (tx['start_date'] ?? tx['created_at']).toString(),
                   ),
                 );
-              }).toList(),
-            ),
-          ),
-      ],
-    );
-  }
+              } catch (_) {
+                return '-';
+              }
+            })()
+            : '-';
 
-  Widget _buildReportCard(BuildContext context, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -189,30 +166,25 @@ class _OnReportPageState extends State<OnReportPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Report #${index + 1}",
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
+            "Report ${tripCode?.isNotEmpty == true ? tripCode : '#${index + 1}'}",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
           const SizedBox(height: 8),
           const Divider(height: 1, color: Colors.black12),
           const SizedBox(height: 8),
-          const Text("Customer: PT. Sukses Selalu"),
-          const Text("Total Trip: 12"),
-          const Text("Total Payment: Rp 18.000.000"),
-          const Text("Date: 20/10/2025"),
+          Text("Customer: $customer"),
+          const Text("Total Trip: 1"),
+          Text(
+            "Total Payment: Rp ${NumberFormat.currency(locale: 'id', symbol: '', decimalDigits: 0).format(totalPayment)}",
+          ),
+          Text("Date: $dateStr"),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -226,116 +198,42 @@ class _OnReportPageState extends State<OnReportPage> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: () {
-                _showTripReportDialog(context);
+                showModalBottomSheet<bool>(
+                  context: context,
+                  isScrollControlled: true,
+                  isDismissible: true,
+                  backgroundColor: Colors.white,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                  ),
+                  builder:
+                      (context) => ReportDialog(
+                        transaction: tx,
+                        onReportSuccess: () {
+                          if (_selectedVehicle != null) {
+                            _loadTransactionsForVehicle(_selectedVehicle!.id);
+                          }
+                        },
+                      ),
+                ).then((success) {
+                  if (success == true && mounted) {
+                    _loadTransactionsForVehicle(_selectedVehicle!.id);
+                    CustomFlushbar.show(
+                      context,
+                      message: 'Report berhasil disimpan',
+                      type: FlushbarType.success,
+                    );
+                  }
+                });
               },
               child: const Text(
-                "DETAIL REPORT",
+                "TRIP REPORT",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🔹 Popup Form Trip Report
-  void _showTripReportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Trip Report Form",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildInputField("KM Start", "Input Data", kmStartController),
-                  _buildInputField("KM End", "Input Data", kmEndController),
-                  _buildInputField(
-                      "Driver Fee", "Input Total", driverFeeController),
-                  _buildInputField(
-                      "Gasoline", "Input Amount", gasolineController),
-                  _buildInputField("Destination", "Input Destination",
-                      destinationController),
-                  _buildInputField("Others", "Lainnya...", othersController),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        "SAVE",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInputField(
-      String label, String hint, TextEditingController controller) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(color: Colors.grey),
-              filled: true,
-              fillColor: const Color(0xFFEDEDED),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
               ),
             ),
           ),

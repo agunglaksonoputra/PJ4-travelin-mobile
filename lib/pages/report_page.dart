@@ -1,474 +1,389 @@
 import 'package:flutter/material.dart';
-import 'package:travelin/pages/homepage.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:travelin/models/cashflow/cashflow_year_model.dart';
+import 'package:travelin/pages/report/transaction_list_page.dart';
+import 'package:travelin/pages/withdraw/withdraw_page.dart';
+import 'package:travelin/utils/currency_utils.dart';
+import 'package:travelin/utils/format_month.dart';
+import '../services/cashflow_service.dart';
+import '../utils/app_logger.dart';
+import '../utils/auth_helper.dart';
 import '../widgets/bottom_navbar.dart';
+import '../widgets/custom_flushbar.dart';
 
-class ReportPage extends StatelessWidget {
+class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
 
   @override
+  State<ReportPage> createState() => _ReportPageState();
+}
+
+class _ReportPageState extends State<ReportPage> {
+  List<CashFlowYear> _yearData  = [];
+  bool _loading = true;
+  String? _error;
+
+  bool get canWithdraw {
+    return AuthHelper.currentRole == 'admin' ||
+        AuthHelper.currentRole == 'owner';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCashFlow();
+  }
+
+  Future<void> _loadCashFlow() async {
+    try {
+      final result = await CashFlowService.getCashFlowSummary(page: 1, limit: 12);
+
+      setState(() {
+        _yearData = result.data;
+        _loading = false;
+      });
+
+      AppLogger.i("CashFlow Loaded: ${result.data.length} years");
+    } catch (e, stack) {
+      AppLogger.e("Error loading cashflow", error: e, stackTrace: stack);
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF3F3F3),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+        surfaceTintColor: Colors.white,
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        title: const Text(
+          "Report",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+      ),
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Center(child: Text("Error: $_error"))
+            : _yearData.isEmpty
+            ? const Center(child: Text("Belum ada data"))
+            : SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
+            child: Column(
+              children: _yearData.expand((year) {
+                return year.months.map((m) {
+                  final parts = m.month.split("-"); // ["2026","01"]
+
+                  return buildReportItem(
+                    year: parts[0],
+                    monthRaw: parts[1],
+                    monthLabel: formatMonth(m.month),
+                    totalCashFlow: m.totalCashFlow,
+                    profit: m.totalProfit,
+                    cashIn: m.totalCashIn,
+                    totalTransactions: m.totalTransactions,
+                  );
+                });
+              }).toList(),
+            ),
+          ),
+        ),
+      ),
+      floatingActionButton: canWithdraw
+          ? Padding(
+        padding: const EdgeInsets.only(bottom: 8, right: 8),
+        child: FloatingActionButton.extended(
+          backgroundColor: Colors.redAccent,
+          elevation: 5,
+          label: const Text(
+            "Withdraw",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           onPressed: () {
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const HomePage()),
+              MaterialPageRoute(
+                builder: (context) => const WithdrawPage(),
+              ),
             );
           },
         ),
-        title: const Text(
-          'Report',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-      ),
+      )
+          : null,
 
-      // 🔹 Body
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
-            child: Text(
-              "Daftar Transaksi",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
-          // 🔹 List transaksi
-          Expanded(
-            child: ListView.builder(
-              itemCount: 4,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ReportDetailPage(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              height: 50,
-                              width: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.teal,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.directions_bus,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  "Transaction #1",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                Text(
-                                  "Mobil 1",
-                                  style: TextStyle(color: Colors.black54),
-                                ),
-                                Text(
-                                  "19/10/2025",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const Text(
-                          "Rp 2.000.000",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // 🔹 Tombol Withdraw
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10, right: 20),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    builder: (BuildContext context) {
-                      return Dialog(
-                        backgroundColor: Colors.white, // ✅ background putih
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: WithdrawPopup(),
-                      );
-                    },
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.lightBlueAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-                child: const Text(
-                  "WITHDRAW",
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-
-      // 🔹 Bottom NavBar tetap
       bottomNavigationBar: BottomNavBar(
         currentIndex: 2,
-        onTap: (i) {
-          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (i == 1) Navigator.pushReplacementNamed(context, '/actual');
+        role: AuthHelper.currentRole, // atau state role kamu
+        onTap: (i) async {
+          if (i == 0) {
+            Navigator.pushReplacementNamed(context, '/home');
+            return;
+          }
+
+          if (i == 1) {
+            Navigator.pushReplacementNamed(context, '/actual');
+            return;
+          }
+
+          if (i == 2) {
+            // already on report
+            return;
+          }
+
+          // index 3 HANYA AKAN ADA JIKA ADMIN
+          if (i == 3) {
+            Navigator.pushReplacementNamed(context, '/admin');
+          }
         },
       ),
+
     );
   }
-}
 
-class WithdrawPopup extends StatelessWidget {
-  WithdrawPopup({super.key});
-
-  final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.grey,
-      padding: const EdgeInsets.all(16),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            const Center(
-              child: Text(
-                "Withdraw",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+  Widget buildReportItem({
+    required String year,
+    required String monthRaw, // "01"
+    required String monthLabel, // "Januari 2026"
+    required num totalCashFlow,
+    required num profit,
+    required num cashIn,
+    required int totalTransactions,
+  })
+  {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TransactionListPage(
+              year: year,
+              month: monthRaw,
             ),
-            const SizedBox(height: 16),
-
-            const Text(
-              "Choose Owner",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              readOnly: true,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.person),
-                hintText: "Select Owner",
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            const Text(
-              "Total Balance",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const Text(
-              "Rp 10.000.000",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 16),
-
-            // Withdrawal
-            const Text(
-              "Total Withdrawal",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: "Input Amount",
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            const Text("Date", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _dateController,
-              readOnly: true,
-              decoration: InputDecoration(
-                hintText: "Input Date",
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onTap: () async {
-                DateTime? pickedDate = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2030),
-                );
-                if (pickedDate != null) {
-                  _dateController.text =
-                      "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
-                }
-              },
-            ),
-            const SizedBox(height: 20),
-
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.lightBlueAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 14,
-                  ),
-                ),
-                child: const Text(
-                  "Withdraw",
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
           ],
         ),
-      ),
-    );
-  }
-}
-
-class ReportDetailPage extends StatelessWidget {
-  const ReportDetailPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const ReportPage()),
-            );
-          },
-        ),
-        title: const Text(
-          'Report Detail',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 4,
-                offset: Offset(0, 2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Section
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blue.shade600,
+                    Colors.blue.shade700,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        height: 50,
-                        width: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.teal,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.directions_bus,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "Transaction #1",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          Text(
-                            "Mobil 1",
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                          Text(
-                            "19/10/2025",
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      FontAwesomeIcons.calendarCheck,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
-                  const Text(
-                    "Rp 2.000.000",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          monthLabel,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$totalTransactions transaksi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 10),
+            ),
 
-              const Text(
-                "Payment Detail",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 6),
-              _detailRow("Payment Amount", "Rp 2.000.000"),
-              _detailRow("Payment 1", "Rp 1.000.000"),
-              _detailRow("Payment Methode", "Cash"),
-              _detailRow("Date", "19/10/2025"),
-              _detailRow("Payment 2", "Rp 1.000.000"),
-              _detailRow("Payment Methode", "Cash"),
-              _detailRow("Date", "19/10/2025"),
+            // Content Section
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Total Dana Masuk
+                  const Text(
+                    "Total Dana Masuk",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    CurrencyUtils.format(totalCashFlow),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
 
-              const SizedBox(height: 16),
-              const Text(
-                "Trip Detail",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  const SizedBox(height: 16),
+
+                  // Breakdown Cards
+                  Row(
+                    children: [
+                      // Profit Card
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.green.shade100,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    FontAwesomeIcons.arrowTrendUp,
+                                    color: Colors.green.shade700,
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Profit",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.green.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                CurrencyUtils.format(profit),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      // Deposit Card
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.shade100,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    FontAwesomeIcons.wallet,
+                                    color: Colors.orange.shade700,
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Deposit",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.orange.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                CurrencyUtils.format(cashIn),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              _detailRow("KM Start", "1.000 KM"),
-              _detailRow("KM End", "1.500 KM"),
-              _detailRow("Driver Fee", "Rp 500.000"),
-              _detailRow("Gasoline", "100 L"),
-              _detailRow("Destination", "Bandung"),
-              const SizedBox(height: 8),
-              const Text(
-                "Notes",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const Text(
-                "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et.",
-                style: TextStyle(color: Colors.black87),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
-        onTap: (i) {
-          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (i == 1) Navigator.pushReplacementNamed(context, '/actual');
-        },
-      ),
-    );
-  }
-
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.black87, fontSize: 14),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-        ],
       ),
     );
   }

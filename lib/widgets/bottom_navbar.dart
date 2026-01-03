@@ -4,11 +4,13 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final String role;
 
   const BottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    required this.role,
   });
 
   @override
@@ -35,6 +37,8 @@ class BottomNavBar extends StatelessWidget {
           _buildNavItem(FontAwesomeIcons.house, "Home", 0),
           _buildNavItem(FontAwesomeIcons.listCheck, "Actual", 1),
           _buildNavItem(FontAwesomeIcons.fileInvoice, "Report", 2),
+          if (role == 'admin')
+            _buildNavItem(FontAwesomeIcons.userGear, "Admin", 3),
         ],
       ),
     );

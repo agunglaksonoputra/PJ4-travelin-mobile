@@ -14,10 +14,7 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'password': password,
-        }),
+        body: jsonEncode({'username': username, 'password': password}),
       );
 
       if (response.statusCode == 200) {
@@ -27,9 +24,10 @@ class AuthService {
           final userData = resp['data']['user'];
           final token = resp['data']['token'];
 
-          // Simpan token
+          // Simpan token dan user ID
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString("token", token);
+          await prefs.setString("userId", userData['id'].toString());
 
           AppLogger.i('Login success for $username');
 
@@ -38,16 +36,10 @@ class AuthService {
           AppLogger.w('Login failed: invalid response structure');
         }
       } else {
-        AppLogger.w(
-          'Login failed with status ${response.statusCode}',
-        );
+        AppLogger.w('Login failed with status ${response.statusCode}');
       }
     } catch (e, s) {
-      AppLogger.e(
-        'Login exception occurred',
-        error: e,
-        stackTrace: s,
-      );
+      AppLogger.e('Login exception occurred', error: e, stackTrace: s);
     }
 
     return null;
@@ -55,7 +47,11 @@ class AuthService {
 
   // REGISTER
   Future<UserModel?> register(
-      String name, String username, String email, String password) async {
+    String name,
+    String username,
+    String email,
+    String password,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
