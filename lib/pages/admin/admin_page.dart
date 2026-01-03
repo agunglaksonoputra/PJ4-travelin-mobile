@@ -54,7 +54,7 @@ class _AdminPageState extends State<AdminPage> {
                   title: "Owner Management",
                   subtitle: "Kelola data owner",
                   onTap: () {
-                    // Navigator.pushNamed(context, '/admin/vehicles');
+                    Navigator.pushNamed(context, '/admin/owners');
                   },
                 ),
               ],

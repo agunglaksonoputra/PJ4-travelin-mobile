@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:travelin/pages/OnReport_page.dart';
 import 'package:travelin/pages/admin/admin_page.dart';
+import 'package:travelin/pages/admin/owner_master_page.dart';
 import 'package:travelin/pages/admin/user_master_page.dart';
 import 'package:travelin/pages/admin/vehicle_master_page.dart';
 import 'package:travelin/pages/reservation_page.dart';
@@ -51,6 +52,7 @@ class MyApp extends StatelessWidget {
         '/admin': (context) => const AdminPage(),
         '/admin/users': (context) => const UserMasterPage(),
         '/admin/vehicles': (context) => const VehicleMasterPage(),
+        '/admin/owners': (context) => const OwnerMasterPage(),
       },
     );
   }
