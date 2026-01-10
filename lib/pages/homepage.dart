@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:travelin/pages/reservation_page.dart';
+import '../helper/bottom_nav_controller.dart';
 import '../models/cashflow_model.dart';
 import '../services/user_service.dart';
 import '../services/report_service.dart';
@@ -89,25 +90,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> onItemTapped(int index) async {
-    setState(() => selectedIndex = index);
-
-    switch (index) {
-      case 0:
-      // stay on home
-        break;
-
-      case 1:
-        Navigator.pushReplacementNamed(context, '/actual');
-        break;
-
-      case 2:
-        Navigator.pushReplacementNamed(context, '/report');
-        break;
-
-      case 3:
-        Navigator.pushReplacementNamed(context, '/admin');
-        break;
-    }
+    await BottomNavController.onItemTapped(
+      context: context,
+      index: index,
+      onIndexChanged: (i) {
+        setState(() => selectedIndex = i);
+      },
+    );
   }
 
   void _openReservasiPage() {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
+import '../../helper/bottom_nav_controller.dart';
 import '../../utils/auth_helper.dart';
 import '../../widgets/bottom_navbar.dart';
 
@@ -12,6 +12,18 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
+  int selectedIndex = 3;
+
+  Future<void> onItemTapped(int index) async {
+    await BottomNavController.onItemTapped(
+      context: context,
+      index: index,
+      onIndexChanged: (i) {
+        setState(() => selectedIndex = i);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,27 +75,9 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 3, // Report
+        currentIndex: selectedIndex,
         role: AuthHelper.currentRole,
-        onTap: (i) {
-          switch (i) {
-            case 0:
-              Navigator.pushReplacementNamed(context, '/home');
-              break;
-
-            case 1:
-              Navigator.pushReplacementNamed(context, '/actual');
-              break;
-
-            case 2:
-              Navigator.pushReplacementNamed(context, '/report');
-              break;
-
-            case 3:
-            // already on report
-              break;
-          }
-        },
+        onTap: onItemTapped,
       ),
 
     );

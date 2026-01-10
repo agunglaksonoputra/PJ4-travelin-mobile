@@ -5,11 +5,12 @@ import 'package:travelin/pages/report/transaction_list_page.dart';
 import 'package:travelin/pages/withdraw/withdraw_page.dart';
 import 'package:travelin/utils/currency_utils.dart';
 import 'package:travelin/utils/format_month.dart';
-import '../services/cashflow_service.dart';
-import '../utils/app_logger.dart';
-import '../utils/auth_helper.dart';
-import '../widgets/bottom_navbar.dart';
-import '../widgets/custom_flushbar.dart';
+import '../../helper/bottom_nav_controller.dart';
+import '../../services/cashflow_service.dart';
+import '../../utils/app_logger.dart';
+import '../../utils/auth_helper.dart';
+import '../../widgets/bottom_navbar.dart';
+import '../../widgets/custom_flushbar.dart';
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -19,6 +20,7 @@ class ReportPage extends StatefulWidget {
 }
 
 class _ReportPageState extends State<ReportPage> {
+  int selectedIndex = 2;
   List<CashFlowYear> _yearData  = [];
   bool _loading = true;
   String? _error;
@@ -50,13 +52,23 @@ class _ReportPageState extends State<ReportPage> {
       });
 
       AppLogger.i("CashFlow Loaded: ${result.data.length} years");
-    } catch (e, stack) {
-      AppLogger.e("Error loading cashflow", error: e, stackTrace: stack);
+    } catch (e) {
+      // AppLogger.e("Error loading cashflow");
       setState(() {
-        _error = e.toString();
+        _error = "Gagal memuat data cashflow";
         _loading = false;
       });
     }
+  }
+
+  Future<void> onItemTapped(int index) async {
+    await BottomNavController.onItemTapped(
+      context: context,
+      index: index,
+      onIndexChanged: (i) {
+        setState(() => selectedIndex = i);
+      },
+    );
   }
 
   @override
@@ -132,28 +144,9 @@ class _ReportPageState extends State<ReportPage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
-        role: AuthHelper.currentRole, // atau state role kamu
-        onTap: (i) async {
-          if (i == 0) {
-            Navigator.pushReplacementNamed(context, '/home');
-            return;
-          }
-
-          if (i == 1) {
-            Navigator.pushReplacementNamed(context, '/actual');
-            return;
-          }
-
-          if (i == 2) {
-            // already on report
-            return;
-          }
-
-          if (i == 3) {
-            Navigator.pushReplacementNamed(context, '/admin');
-          }
-        },
+        currentIndex: selectedIndex,
+        role: AuthHelper.currentRole,
+        onTap: onItemTapped,
       ),
 
     );

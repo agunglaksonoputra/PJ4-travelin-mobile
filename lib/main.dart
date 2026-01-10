@@ -12,7 +12,7 @@ import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/homepage.dart';
 import 'pages/actual_page.dart';
-import 'pages/report_page.dart';
+import 'pages/report/report_page.dart';
 import 'pages/OnPayment_page.dart';
 import 'pages/OnPlanning_page.dart';
 

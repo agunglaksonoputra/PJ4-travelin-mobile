@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:travelin/widgets/trip_card.dart';
 import 'package:intl/intl.dart';
+import '../helper/bottom_nav_controller.dart';
 import '../models/vehicle_models.dart';
 import '../models/transaction_summary_model.dart';
 import '../services/vehicle_service.dart';
@@ -18,6 +19,7 @@ class ActualPage extends StatefulWidget {
 }
 
 class _ActualPageState extends State<ActualPage> {
+  int selectedIndex = 1;
   VehicleModel? selectedVehicle;
   List<VehicleModel> vehicleList = [];
   Map<String, TransactionSummaryModel> summaryByStatus = {};
@@ -81,6 +83,17 @@ class _ActualPageState extends State<ActualPage> {
       }
     }
   }
+
+  Future<void> onItemTapped(int index) async {
+    await BottomNavController.onItemTapped(
+      context: context,
+      index: index,
+      onIndexChanged: (i) {
+        setState(() => selectedIndex = i);
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -150,28 +163,9 @@ class _ActualPageState extends State<ActualPage> {
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 1,
+        currentIndex: selectedIndex,
         role: AuthHelper.currentRole,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushReplacementNamed(context, '/home');
-              break;
-
-            case 1:
-            // already on actual
-              break;
-
-            case 2:
-              Navigator.pushReplacementNamed(context, '/report');
-              break;
-
-            case 3:
-            // index ini HANYA ADA JIKA ADMIN
-              Navigator.pushReplacementNamed(context, '/admin');
-              break;
-          }
-        },
+        onTap: onItemTapped,
       ),
     );
   }
