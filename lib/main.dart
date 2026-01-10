@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
-import 'package:travelin/pages/OnReport_page.dart';
+import 'package:travelin/pages/actual/OnPlanning_page.dart';
+import 'package:travelin/pages/actual/OnReport_page.dart';
 import 'package:travelin/pages/admin/admin_page.dart';
 import 'package:travelin/pages/admin/owner_master_page.dart';
 import 'package:travelin/pages/admin/user_master_page.dart';
@@ -11,10 +12,9 @@ import 'package:travelin/pages/reservation_page.dart';
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/homepage.dart';
-import 'pages/actual_page.dart';
+import 'pages/actual/actual_page.dart';
 import 'pages/report/report_page.dart';
-import 'pages/OnPayment_page.dart';
-import 'pages/OnPlanning_page.dart';
+import 'pages/actual/OnPayment_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:travelin/widgets/trip_card.dart';
 import 'package:intl/intl.dart';
-import '../helper/bottom_nav_controller.dart';
-import '../models/vehicle_models.dart';
-import '../models/transaction_summary_model.dart';
-import '../services/vehicle_service.dart';
-import '../services/transaction_service.dart';
-import '../utils/auth_helper.dart';
-import '../widgets/bottom_navbar.dart';
-import '../widgets/custom_flushbar.dart';
+import '../../helper/bottom_nav_controller.dart';
+import '../../models/vehicle_models.dart';
+import '../../models/transaction_summary_model.dart';
+import '../../services/vehicle_service.dart';
+import '../../services/transaction_service.dart';
+import '../../utils/auth_helper.dart';
+import '../../widgets/bottom_navbar.dart';
+import '../../widgets/custom_flushbar.dart';
 
 class ActualPage extends StatefulWidget {
   const ActualPage({super.key});

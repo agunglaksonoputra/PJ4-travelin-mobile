@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../utils/auth_helper.dart';
-import '../widgets/custom_flushbar.dart';
-import '../models/tariff_model.dart';
-import '../models/transaction_models.dart';
-import '../models/vehicle_models.dart';
-import '../services/transaction_service.dart';
-import '../widgets/bottom_navbar.dart';
-import '../widgets/form/OnPlanning/payment_dialog.dart';
-import '../widgets/tariff_dropdown.dart';
-import '../widgets/vehicle_dropdown.dart';
+import '../../models/tariff_model.dart';
+import '../../models/transaction_models.dart';
+import '../../models/vehicle_models.dart';
+import '../../services/transaction_service.dart';
+import '../../utils/auth_helper.dart';
+import '../../widgets/bottom_navbar.dart';
+import '../../widgets/custom_flushbar.dart';
+import '../../widgets/form/OnPayment/payment_dialog.dart';
+import '../../widgets/tariff_dropdown.dart';
+import '../../widgets/vehicle_dropdown.dart';
 
 class OnPlanningPage extends StatefulWidget {
   const OnPlanningPage({super.key});
@@ -327,7 +327,7 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
       ),
       builder: (dialogContext) {
         return PaymentDialog(
-          transaction: transaction,
+          transactionId: transaction.id,
           onPaymentSuccess: _loadTransactions,
         );
       },
