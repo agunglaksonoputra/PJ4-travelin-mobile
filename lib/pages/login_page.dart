@@ -83,19 +83,14 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.directions_bus, size: 100, color: Colors.teal),
-              const SizedBox(height: 10),
-              const Text(
-                'Travelin',
-                style: TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal,
-                ),
+              Image.asset(
+                'assets/images/travelin_logo.png',
+                width: 150,
+                height: 150,
+                // color: Colors.teal,
+                fit: BoxFit.contain,
               ),
-
-              const SizedBox(height: 40),
-
+              const SizedBox(height: 10),
               CustomInputField(
                   label: "Username",
                   icon: FontAwesomeIcons.envelope,
@@ -139,17 +134,6 @@ class _LoginPageState extends State<LoginPage> {
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/signup'),
-                child: const Text(
-                  "Don't have an account? Register here",
-                  style: TextStyle(
-                    color: Colors.blueAccent,
-                    fontSize: 14,
                   ),
                 ),
               ),
