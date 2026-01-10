@@ -29,10 +29,14 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _loadRole();
     loadUser();
     loadCurrentMonthSummary();
   }
-
+  Future<void> _loadRole() async {
+    await AuthHelper.loadRole();
+    if (mounted) setState(() {});
+  }
 
   Future<void> loadUser() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -167,7 +171,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Row(
                       children: [
-                        _circleIcon(FontAwesomeIcons.bell),
+                        // _circleIcon(FontAwesomeIcons.bell),
                         const SizedBox(width: 12),
                         GestureDetector(
                           onTap: () {
@@ -228,21 +232,21 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 24),
 
-                // PLANNING
-                const Text(
-                  'PLANNING',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 12),
+              // PLANNING
+              // const Text(
+              //   'PLANNING',
+              //   style: TextStyle(
+              //     fontWeight: FontWeight.bold,
+              //     color: Colors.black,
+              //     fontSize: 18,
+              //   ),
+              // ),
+              // const SizedBox(height: 12),
 
-                // const Expanded(
-                //   flex: 3,
-                //   child: PlanningTable(),
-                // ),
+              // const Expanded(
+              //   flex: 3,
+              //   child: PlanningTable(),
+              // ),
               ],
             ),
           ),

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../models/user_models.dart';
 import '../utils/app_logger.dart';
+import '../utils/auth_helper.dart';
 
 class AuthService {
   static final String baseUrl = ApiConfig.baseUrl(ApiVersion.v1);
@@ -24,19 +25,24 @@ class AuthService {
           final userData = resp['data']['user'];
           final token = resp['data']['token'];
 
-          // Simpan token dan user ID
-          SharedPreferences prefs = await SharedPreferences.getInstance();
+          final prefs = await SharedPreferences.getInstance();
+
+          // 🔒 bersihkan auth lama
+          await prefs.remove("token");
+          await prefs.remove("userId");
+          await prefs.remove("role");
+
+          // ✅ simpan auth baru
           await prefs.setString("token", token);
           await prefs.setString("userId", userData['id'].toString());
+          await prefs.setString("role", userData['role']);
 
-          AppLogger.i('Login success for $username');
+          await AuthHelper.loadRole();
+
+          AppLogger.i('Login success for ${userData['username']}');
 
           return UserModel.fromJson(userData);
-        } else {
-          AppLogger.w('Login failed: invalid response structure');
         }
-      } else {
-        AppLogger.w('Login failed with status ${response.statusCode}');
       }
     } catch (e, s) {
       AppLogger.e('Login exception occurred', error: e, stackTrace: s);

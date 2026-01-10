@@ -12,7 +12,6 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,7 +63,7 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 2, // Report
+        currentIndex: 3, // Report
         role: AuthHelper.currentRole,
         onTap: (i) {
           switch (i) {
@@ -77,6 +76,10 @@ class _AdminPageState extends State<AdminPage> {
               break;
 
             case 2:
+              Navigator.pushReplacementNamed(context, '/report');
+              break;
+
+            case 3:
             // already on report
               break;
           }

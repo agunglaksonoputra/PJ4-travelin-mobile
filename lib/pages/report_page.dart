@@ -31,7 +31,13 @@ class _ReportPageState extends State<ReportPage> {
   @override
   void initState() {
     super.initState();
+    _loadRole();
     _loadCashFlow();
+  }
+
+  Future<void> _loadRole() async {
+    await AuthHelper.loadRole();
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadCashFlow() async {
@@ -144,7 +150,6 @@ class _ReportPageState extends State<ReportPage> {
             return;
           }
 
-          // index 3 HANYA AKAN ADA JIKA ADMIN
           if (i == 3) {
             Navigator.pushReplacementNamed(context, '/admin');
           }
