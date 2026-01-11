@@ -75,6 +75,7 @@ class PaymentService {
     required int transactionId,
     required double amount,
     required String method,
+    required String paidAt,
     String? note,
   }) async {
     AppLogger.i('Creating payment for transaction $transactionId');
@@ -84,6 +85,7 @@ class PaymentService {
         'transaction_id': transactionId,
         'amount': amount,
         'method': method,
+        'paid_at': paidAt,
         if (note != null && note.isNotEmpty) 'note': note,
       });
 

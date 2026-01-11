@@ -105,12 +105,7 @@ class _LoginPageState extends State<LoginPage> {
                 icon: FontAwesomeIcons.lock,
                 hint: "Enter your password",
                 controller: passwordController,
-                obscure: isPasswordHidden,
-                onToggleVisibility: () {
-                  setState(() {
-                    isPasswordHidden = !isPasswordHidden;
-                  });
-                },
+                type: InputFieldType.password,
               ),
 
               const SizedBox(height: 30),

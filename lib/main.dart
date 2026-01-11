@@ -9,6 +9,7 @@ import 'package:travelin/pages/admin/owner_master_page.dart';
 import 'package:travelin/pages/admin/user_master_page.dart';
 import 'package:travelin/pages/admin/vehicle_master_page.dart';
 import 'package:travelin/pages/reservation_page.dart';
+import 'helper/app_orientation.dart';
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/homepage.dart';
@@ -18,6 +19,7 @@ import 'pages/actual/OnPayment_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppOrientation.lockPortrait();
   await initializeDateFormatting('id_ID', null);
   Intl.defaultLocale = 'id_ID';
   await dotenv.load(fileName: ".env");

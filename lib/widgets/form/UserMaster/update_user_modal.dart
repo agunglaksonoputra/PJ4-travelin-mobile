@@ -137,7 +137,7 @@ class _UpdateUserModalState extends State<UpdateUserModal> {
               hint: "Leave empty to keep current password",
               icon: FontAwesomeIcons.lock,
               controller: passwordController,
-              obscure: true,
+              type: InputFieldType.password,
             ),
             const SizedBox(height: 12),
             RoleDropdown(

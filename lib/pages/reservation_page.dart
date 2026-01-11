@@ -196,10 +196,11 @@ class _ReservationPageState extends State<ReservationPage> {
               ),
               const SizedBox(height: 16),
               CustomInputField(
-                label: 'Catatan',
+                label: 'Catatan (Opsional)',
                 icon: FontAwesomeIcons.noteSticky,
-                hint: 'Catatan tambahan',
+                hint: 'Masukkan catatan',
                 controller: notesController,
+                type: InputFieldType.note,
               ),
               const SizedBox(height: 24),
               SizedBox(

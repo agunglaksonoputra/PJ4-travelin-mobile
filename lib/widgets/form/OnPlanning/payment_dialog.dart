@@ -121,12 +121,12 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
       if (value == 'cash') {
         final double targetAmount =
-            _remainingBalance > 0 ? _remainingBalance : _totalCost;
+        _remainingBalance > 0 ? _remainingBalance : _totalCost;
         if (targetAmount > 0) {
           _amountController.text =
-              targetAmount % 1 == 0
-                  ? targetAmount.toStringAsFixed(0)
-                  : targetAmount.toStringAsFixed(2);
+          targetAmount % 1 == 0
+              ? targetAmount.toStringAsFixed(0)
+              : targetAmount.toStringAsFixed(2);
         } else {
           _amountController.clear();
         }
@@ -500,22 +500,22 @@ class _PaymentDialogState extends State<PaymentDialog> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child:
-            _isSubmitting
-                ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-                : const Text(
-                  "SIMPAN",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+        _isSubmitting
+            ? const SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        )
+            : const Text(
+          "SIMPAN",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

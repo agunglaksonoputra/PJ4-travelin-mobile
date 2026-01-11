@@ -332,7 +332,8 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   onPressed:
-                      isPaidOff ? null : () => _showCreatePaymentDialog(group),
+                      // isPaidOff ? null : () => _showCreatePaymentDialog(group),
+                  () {},
                   child: Text(
                     isPaidOff ? 'LUNAS' : 'PAYMENT',
                     style: const TextStyle(
@@ -629,32 +630,32 @@ class _OnPaymentPageState extends State<OnPaymentPage> {
     );
   }
 
-  Future<void> _showCreatePaymentDialog(_VehiclePaymentGroup group) async {
-    final result = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      enableDrag: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder:
-          (_) => PaymentDialog(
-            transactionId: group.transactionId,
-            remainingAmount: group.remainingAmount,
-            onPaymentSuccess: () async {
-              final selectedVehicle = _selectedVehicle;
-              if (selectedVehicle != null) {
-                await _loadPayments(selectedVehicle.id);
-              }
-            },
-          ),
-    );
-
-    if (result == true && mounted) {
-      _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
-    }
-  }
+  // Future<void> _showCreatePaymentDialog(_VehiclePaymentGroup group) async {
+  //   final result = await showModalBottomSheet<bool>(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     enableDrag: true,
+  //     backgroundColor: Colors.white,
+  //     shape: const RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  //     ),
+  //     builder:
+  //         (_) => PaymentDialog(
+  //           transaction: group.transaction,
+  //           remainingAmount: group.remainingAmount,
+  //           onPaymentSuccess: () async {
+  //             final selectedVehicle = _selectedVehicle;
+  //             if (selectedVehicle != null) {
+  //               await _loadPayments(selectedVehicle.id);
+  //             }
+  //           },
+  //         ),
+  //   );
+  //
+  //   if (result == true && mounted) {
+  //     _showSuccessFlushbar('Pembayaran berhasil ditambahkan');
+  //   }
+  // }
 
   List<_VehiclePaymentGroup> _groupPaymentsByTransaction(
     List<PaymentModel> payments,
