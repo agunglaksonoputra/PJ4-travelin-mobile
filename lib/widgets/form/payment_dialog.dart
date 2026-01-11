@@ -131,8 +131,6 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
-
-
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(20, 16, 20, 16),

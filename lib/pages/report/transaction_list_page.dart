@@ -74,13 +74,15 @@ class _TransactionListPageState extends State<TransactionListPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(child: Text("Error: $_error"))
-          : ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _transactions.length,
-        itemBuilder: (_, i) {
-          final tx = _transactions[i];
-          return _transactionCard(tx);
-        },
+          : SafeArea(
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: _transactions.length,
+          itemBuilder: (_, i) {
+            final tx = _transactions[i];
+            return _transactionCard(tx);
+          },
+        ),
       ),
     );
   }

@@ -203,13 +203,24 @@ class TripCard extends StatelessWidget {
         );
 
       case TripCardType.report:
-        return Container(
-          width: double.infinity,
-          child: PrimaryButton(
-            label: 'VIEW REPORT',
-            icon: FontAwesomeIcons.fileLines,
-            onPressed: onReport,
-          ),
+        return Row(
+          children: [
+            Expanded(
+              // width: double.infinity,
+              child: PrimaryButton(
+                label: 'Detail',
+                onPressed: onView,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              // width: double.infinity,
+              child: PrimaryButton(
+                label: 'Report',
+                onPressed: onReport,
+              ),
+            ),
+          ],
         );
 
       case TripCardType.closed:

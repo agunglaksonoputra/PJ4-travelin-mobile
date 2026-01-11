@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:travelin/utils/currency_utils.dart';
+import 'package:travelin/utils/format_string.dart';
 
 import '../../models/cashflow/monthly_transaction_detail_model.dart';
 import '../../services/transaction_service.dart';
@@ -589,7 +590,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      payment.method,
+                      FormatString.format(payment.method),
+                      // payment.method,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -610,7 +612,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                formatDate(payment.paidAt),
+                formatDate2(payment.paidAt),
+                // formatDate(payment.paidAt),
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[600],

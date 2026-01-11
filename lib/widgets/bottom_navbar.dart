@@ -16,25 +16,25 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            spreadRadius: 0,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
       child: SafeArea(
         top: false,
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(12),
-              topRight: Radius.circular(12),
-            ),
-            // boxShadow: [
-            //   BoxShadow(
-            //     color: Colors.black12,
-            //     blurRadius: 6,
-            //     spreadRadius: 2,
-            //   ),
-            // ],
-          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [

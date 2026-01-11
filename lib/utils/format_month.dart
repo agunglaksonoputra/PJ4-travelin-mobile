@@ -79,6 +79,43 @@ String safeDateForApi(String? value) {
   throw FormatException('Format tanggal tidak dikenali: $value');
 }
 
+DateTime safeParseDate(String? value) {
+  if (value == null || value.trim().isEmpty) {
+    throw FormatException('Tanggal kosong');
+  }
+
+  final v = value.trim();
+
+  // yyyy-MM-dd
+  if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(v)) {
+    return DateTime.parse(v);
+  }
+
+  // dd/MM/yyyy
+  try {
+    return DateFormat('dd/MM/yyyy').parseStrict(v);
+  } catch (_) {}
+
+  // d MMM yyyy (EN)
+  try {
+    return DateFormat('d MMM yyyy', 'en_US').parseStrict(v);
+  } catch (_) {}
+
+  // d MMM yyyy (ID singkatan)
+  try {
+    final normalized = _normalizeIndonesianMonth(v);
+    return DateFormat('d MMM yyyy', 'en_US').parseStrict(normalized);
+  } catch (_) {}
+
+  // d MMMM yyyy (ID lengkap)
+  try {
+    return DateFormat('d MMMM yyyy', 'id_ID').parseStrict(v);
+  } catch (_) {}
+
+  throw FormatException('Format tanggal tidak dikenali: $value');
+}
+
+
 String _normalizeIndonesianMonth(String value) {
   const months = {
     'Jan': 'Jan',
