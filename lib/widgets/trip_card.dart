@@ -182,13 +182,24 @@ class TripCard extends StatelessWidget {
         );
 
       case TripCardType.payment:
-        return Container(
-          width: double.infinity,
-          child: PrimaryButton(
-            label: 'VIEW PAYMENT',
-            icon: FontAwesomeIcons.moneyBillWave,
-            onPressed: onView,
-          ),
+        return Row(
+          children: [
+            Expanded(
+              // width: double.infinity,
+              child: PrimaryButton(
+                label: 'Detail',
+                onPressed: onView,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              // width: double.infinity,
+              child: PrimaryButton(
+                label: 'Payment',
+                onPressed: onPayment,
+              ),
+            ),
+          ],
         );
 
       case TripCardType.report:
@@ -240,7 +251,9 @@ class TripCard extends StatelessWidget {
       children: [
         _buildInfoRow(FontAwesomeIcons.calendarDay, 'Jadwal', _schedule),
         const SizedBox(height: 8),
-        _buildInfoRow(FontAwesomeIcons.clock, 'Trip(s)', _duration),
+        _buildInfoRow(FontAwesomeIcons.circleCheck, 'Dibayar', _paid),
+        const SizedBox(height: 8),
+        _buildInfoRow(FontAwesomeIcons.clockRotateLeft, 'Sisa', _remaining),
         const SizedBox(height: 8),
         _buildInfoRow(FontAwesomeIcons.wallet, 'Total', _total,
             isTotal: true),

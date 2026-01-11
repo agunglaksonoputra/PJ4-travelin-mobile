@@ -46,7 +46,7 @@ String safeDateForApi(String? value) {
 
   final v = value.trim();
 
-  // yyyy-MM-dd (ISO, backend-ready)
+  // yyyy-MM-dd
   if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(v)) {
     return v;
   }
@@ -57,13 +57,20 @@ String safeDateForApi(String? value) {
     return DateFormat('yyyy-MM-dd').format(date);
   } catch (_) {}
 
-  // d MMM yyyy (EN) → "6 Jan 2026"
+  // d MMM yyyy (EN)
   try {
     final date = DateFormat('d MMM yyyy', 'en_US').parseStrict(v);
     return DateFormat('yyyy-MM-dd').format(date);
   } catch (_) {}
 
-  // d MMMM yyyy (ID) → "6 Januari 2026"
+  // 🔴 FIX: d MMM yyyy (ID singkatan)
+  try {
+    final normalized = _normalizeIndonesianMonth(v);
+    final date = DateFormat('d MMM yyyy', 'en_US').parseStrict(normalized);
+    return DateFormat('yyyy-MM-dd').format(date);
+  } catch (_) {}
+
+  // d MMMM yyyy (ID lengkap)
   try {
     final date = DateFormat('d MMMM yyyy', 'id_ID').parseStrict(v);
     return DateFormat('yyyy-MM-dd').format(date);
@@ -71,6 +78,34 @@ String safeDateForApi(String? value) {
 
   throw FormatException('Format tanggal tidak dikenali: $value');
 }
+
+String _normalizeIndonesianMonth(String value) {
+  const months = {
+    'Jan': 'Jan',
+    'Feb': 'Feb',
+    'Mar': 'Mar',
+    'Apr': 'Apr',
+    'Mei': 'May',
+    'Jun': 'Jun',
+    'Jul': 'Jul',
+    'Agu': 'Aug',
+    'Sep': 'Sep',
+    'Okt': 'Oct',
+    'Nov': 'Nov',
+    'Des': 'Dec',
+  };
+
+  var result = value;
+  months.forEach((id, en) {
+    result = result.replaceAllMapped(
+      RegExp('\\b$id\\b', caseSensitive: false),
+          (_) => en,
+    );
+  });
+
+  return result;
+}
+
 
 
 

@@ -15,33 +15,36 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF2F2F2),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              spreadRadius: 2,
+    return Container(
+      color: Colors.white,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(FontAwesomeIcons.house, "Home", 0),
-            _buildNavItem(FontAwesomeIcons.listCheck, "Actual", 1),
-            _buildNavItem(FontAwesomeIcons.fileInvoice, "Report", 2),
-            if (role == 'admin')
-              _buildNavItem(FontAwesomeIcons.userGear, "Admin", 3),
-          ],
+            // boxShadow: [
+            //   BoxShadow(
+            //     color: Colors.black12,
+            //     blurRadius: 6,
+            //     spreadRadius: 2,
+            //   ),
+            // ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(FontAwesomeIcons.house, "Home", 0),
+              _buildNavItem(FontAwesomeIcons.listCheck, "Actual", 1),
+              _buildNavItem(FontAwesomeIcons.fileInvoice, "Report", 2),
+              if (role == 'admin')
+                _buildNavItem(FontAwesomeIcons.userGear, "Admin", 3),
+            ],
+          ),
         ),
       ),
     );

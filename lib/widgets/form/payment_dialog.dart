@@ -7,20 +7,27 @@ import 'package:travelin/utils/currency_utils.dart';
 import 'package:travelin/widgets/button/primary_button.dart';
 import 'package:travelin/widgets/date_input_field.dart';
 
-import '../../../utils/format_month.dart';
-import '../../custom_flushbar.dart';
-import '../../custom_input_field.dart';
+import '../../utils/format_month.dart';
+import '../custom_flushbar.dart';
+import '../custom_input_field.dart';
+
+enum PaymentDialogType  {
+  planning,
+  payment
+}
 
 class PaymentDialog extends StatefulWidget {
   final TransactionModel transaction;
   final double? remainingAmount;
   final VoidCallback onPaymentSuccess;
+  final PaymentDialogType type;
 
   const PaymentDialog({
     super.key,
     required this.transaction,
     this.remainingAmount,
     required this.onPaymentSuccess,
+    this.type = PaymentDialogType.planning,
   });
 
   @override
@@ -115,8 +122,16 @@ class _PaymentDialogState extends State<PaymentDialog> {
     }
   }
 
+  double get _maxPayableAmount {
+    if (widget.type == PaymentDialogType.payment) {
+      return widget.transaction.outstandingAmount ?? 0;
+    }
+    return widget.transaction.totalCost ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
+
 
     return SafeArea(
       child: Padding(
@@ -138,7 +153,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                _infoTransaction(widget.transaction),
+                _buildInfoSection(),
+                // _infoTransaction(widget.transaction),
                 const SizedBox(height: 12),
 
                 _buildAmountField(widget.transaction),
@@ -194,41 +210,6 @@ class _PaymentDialogState extends State<PaymentDialog> {
     );
   }
 
-  Widget _infoTransaction(TransactionModel transaction) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                FontAwesomeIcons.circleInfo,
-                size: 18,
-                color: Colors.blue,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                "Info Transaksi",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Total: ${CurrencyUtils.formatCurrencyInDouble(transaction.totalCost)}",
-            style: const TextStyle(fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildAmountField(TransactionModel transaction) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +222,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [],
           type: InputFieldType.currency,
-          quickAmount: transaction.totalCost,
+          quickAmount: _maxPayableAmount,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Nominal pembayaran tidak boleh kosong';
@@ -255,9 +236,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
               return 'Nominal pembayaran tidak valid';
             }
 
-            if (widget.remainingAmount != null &&
-                amount > widget.remainingAmount!) {
-              return 'Nominal melebihi sisa hutang';
+            if (amount > _maxPayableAmount) {
+              return widget.type == PaymentDialogType.payment
+                  ? 'Nominal melebihi sisa pembayaran'
+                  : 'Nominal melebihi total transaksi';
             }
 
             return null;
@@ -398,6 +380,130 @@ class _PaymentDialogState extends State<PaymentDialog> {
           type: InputFieldType.note,
         ),
       ],
+    );
+  }
+
+  // Widget _infoTransaction(TransactionModel transaction) {
+  //   return Container(
+  //     padding: const EdgeInsets.all(12),
+  //     decoration: BoxDecoration(
+  //       color: Colors.blue.shade50,
+  //       borderRadius: BorderRadius.circular(12),
+  //       border: Border.all(color: Colors.blue.shade200),
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           children: [
+  //             const Icon(
+  //               FontAwesomeIcons.circleInfo,
+  //               size: 18,
+  //               color: Colors.blue,
+  //             ),
+  //             const SizedBox(width: 8),
+  //             const Text(
+  //               "Info Transaksi",
+  //               style: TextStyle(fontWeight: FontWeight.bold),
+  //             ),
+  //           ],
+  //         ),
+  //         const SizedBox(height: 8),
+  //         Text(
+  //           "Total: ${CurrencyUtils.formatCurrencyInDouble(transaction.totalCost)}",
+  //           style: const TextStyle(fontSize: 12),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  Widget _buildInfoSection() {
+    switch (widget.type) {
+      case PaymentDialogType.planning:
+        return _planningInfo(widget.transaction);
+      case PaymentDialogType.payment:
+        return _paymentInfo(widget.transaction);
+    }
+  }
+
+  Widget _planningInfo(TransactionModel transaction) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                FontAwesomeIcons.circleInfo,
+                size: 18,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "Info Transaksi",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Total: ${CurrencyUtils.formatCurrencyInDouble(transaction.totalCost)}",
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paymentInfo(TransactionModel transaction) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                FontAwesomeIcons.circleInfo,
+                size: 18,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "Info Transaksi",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Dibayar: ${CurrencyUtils.formatCurrencyInDouble(transaction.paidAmount)}",
+            style: const TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Sisa: ${CurrencyUtils.formatCurrencyInDouble(transaction.outstandingAmount)}",
+            style: const TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Total: ${CurrencyUtils.formatCurrencyInDouble(transaction.totalCost)}",
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 

@@ -163,11 +163,26 @@ class _ActualPageState extends State<ActualPage> {
                         trip: _tripCount('payment'),
                         amount: _formattedAmount('payment'),
                         icon: FontAwesomeIcons.moneyBillWave,
-                        onTap:
-                          () => Navigator.pushNamed(
+                        onTap: () async {
+                          final result = await Navigator.pushNamed(
                             context,
                             '/OnPayment_progress',
-                          ),
+                            arguments: {
+                              'selectedVehicle': selectedVehicle,
+                              'vehicleList': vehicleList,
+                            },
+                          );
+
+                          if (!mounted) return;
+
+                          if (result is VehicleModel) {
+                            setState(() {
+                              selectedVehicle = result;
+                            });
+
+                            await _loadSummaryForVehicle(result.id);
+                          }
+                        },
                       ),
                       FiturCard(
                         title: "On Progress of Report",

@@ -3,20 +3,89 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:travelin/utils/currency_utils.dart';
 
 import '../../models/cashflow/monthly_transaction_detail_model.dart';
+import '../../services/transaction_service.dart';
 import '../../utils/format_month.dart';
 
-class TransactionDetailPage extends StatelessWidget {
-  final MonthlyTransactionDetail transaction;
+enum TransactionDetailType {
+  report,
+  actual,
+}
+
+class TransactionDetailPage extends StatefulWidget {
+  final TransactionDetailType? type;
 
   const TransactionDetailPage({
     super.key,
-    required this.transaction,
+    this.type = TransactionDetailType.report
   });
 
   @override
-  Widget build(BuildContext context) {
-    final statusColor = transaction.isClosed ? Colors.green : Colors.orange;
+  State<TransactionDetailPage> createState() => _TransactionDetailPageState();
+}
 
+class _TransactionDetailPageState extends State<TransactionDetailPage> {
+  MonthlyTransactionDetail? transaction;
+
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (transaction != null || _loading) return;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+
+    // =============================
+    // REPORT MODE (pakai arguments)
+    // =============================
+    if (widget.type == TransactionDetailType.report) {
+      if (args is MonthlyTransactionDetail) {
+        setState(() {
+          transaction = args;
+        });
+      }
+      return;
+    }
+
+    // =============================
+    // ACTUAL MODE (fetch API)
+    // =============================
+    if (widget.type == TransactionDetailType.actual) {
+      if (args is Map && args['transactionId'] != null) {
+        final transactionId = args['transactionId'] as int;
+        _loadTransactionDetail(transactionId);
+      }
+    }
+  }
+
+  Future<void> _loadTransactionDetail(int transactionId) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final result = await TransactionService.getMonthlyTransactionDetail(transactionId);
+
+      if (!mounted) return;
+      setState(() {
+        transaction = result;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F3F3),
       appBar: AppBar(
@@ -25,7 +94,7 @@ class TransactionDetailPage extends StatelessWidget {
         surfaceTintColor: Colors.white,
         scrolledUnderElevation: 0,
         elevation: 0,
-        title: Text(
+        title: const Text(
           "Detail Transaksi",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
@@ -34,308 +103,229 @@ class TransactionDetailPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header Card
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    statusColor.withOpacity(0.8),
-                    statusColor,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: statusColor.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: FaIcon(
-                      transaction.isClosed
-                          ? FontAwesomeIcons.circleCheck
-                          : FontAwesomeIcons.clock,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    transaction.tripCode,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      transaction.status.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      body: SafeArea(
+        child: _contentSection(),
+      ),
+    );
+  }
 
-            // Informasi Utama
-            _buildSection(
-              title: "Informasi Utama",
-              icon: FontAwesomeIcons.circleInfo,
-              color: Colors.blue,
-              children: [
-                _infoCard(
-                  icon: FontAwesomeIcons.user,
-                  label: "Customer",
-                  value: transaction.customerName,
-                  color: Colors.blue,
-                ),
-                _infoCard(
-                  icon: FontAwesomeIcons.phone,
-                  label: "Telepon",
-                  value: transaction.customerPhone ?? "-",
-                  color: Colors.green,
-                ),
-                _infoCard(
-                  icon: FontAwesomeIcons.car,
-                  label: "Kendaraan",
-                  value: transaction.vehicle ?? "-",
-                  color: Colors.orange,
-                ),
-                _infoCard(
-                  icon: FontAwesomeIcons.locationDot,
-                  label: "Tujuan",
-                  value: transaction.destination ?? "-",
-                  color: Colors.red,
+  Widget _contentSection() {
+    // 🔵 Loading
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.blue),
+      );
+    }
+
+    // 🔴 Error
+    if (_error != null) {
+      return _centeredPlaceholder(
+        icon: Icons.error_outline,
+        text: _error!,
+        color: Colors.redAccent,
+      );
+    }
+
+    // 🟡 Data belum ada
+    if (transaction == null) {
+      return _centeredPlaceholder(
+        icon: Icons.receipt_long,
+        text: 'Data transaksi tidak tersedia',
+      );
+    }
+
+    // ✅ DATA AMAN
+    final tx = transaction!;
+    final statusColor = tx.isClosed ? Colors.green : Colors.orange;
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // HEADER CARD
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  statusColor.withOpacity(0.8),
+                  statusColor,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: statusColor.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
-
-            _buildSection(
-              title: "Jadwal Perjalanan",
-              icon: FontAwesomeIcons.calendarDays,
-              color: Colors.indigo,
+            child: Column(
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: FaIcon(
+                    tx.isClosed
+                        ? FontAwesomeIcons.circleCheck
+                        : FontAwesomeIcons.clock,
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                FaIcon(
-                                  FontAwesomeIcons.calendarCheck,
-                                  size: 14,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "Mulai",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              transaction.startDate != null
-                                  ? formatDateFromIso(transaction.startDate!)
-                                  : "-",
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 40,
-                        color: Colors.grey[300],
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                FaIcon(
-                                  FontAwesomeIcons.calendarXmark,
-                                  size: 14,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "Selesai",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              transaction.endDate != null
-                                  ? formatDateFromIso(transaction.endDate!)
-                                  : "-",
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    size: 40,
                   ),
                 ),
-              ],
-            ),
-
-            // Keuangan
-            _buildSection(
-              title: "Ringkasan Keuangan",
-              icon: FontAwesomeIcons.wallet,
-              color: Colors.green,
-              children: [
-                _financialCard(
-                  icon: FontAwesomeIcons.moneyBillWave,
-                  label: "Total Dibayar",
-                  value: CurrencyUtils.format(transaction.paidAmount),
-                  color: Colors.green,
-                  isLarge: true,
+                const SizedBox(height: 16),
+                Text(
+                  tx.tripCode,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _financialCard(
-                        icon: FontAwesomeIcons.clockRotateLeft,
-                        label: "Sisa Tagihan",
-                        value: CurrencyUtils.format(transaction.outstandingAmount),
-                        color: Colors.orange,
-                        isCompact: true,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _financialCard(
-                        icon: FontAwesomeIcons.fileInvoiceDollar,
-                        label: "Biaya Ops",
-                        value: CurrencyUtils.format(transaction.operationalCost),
-                        color: Colors.red,
-                        isCompact: true,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _financialCard(
-                  icon: FontAwesomeIcons.chartLine,
-                  label: "Profit",
-                  value: CurrencyUtils.format(transaction.profit),
-                  color: Colors.blue,
-                  isLarge: true,
-                ),
-              ],
-            ),
-
-            // Riwayat Pembayaran
-            _buildSection(
-              title: "Riwayat Pembayaran",
-              icon: FontAwesomeIcons.clockRotateLeft,
-              color: Colors.purple,
-              children: [
-                if (transaction.payments.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    tx.status.toUpperCase(),
+                    style: const TextStyle(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          FaIcon(
-                            FontAwesomeIcons.fileInvoice,
-                            size: 48,
-                            color: Colors.grey[300],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            "Belum ada pembayaran",
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  ...transaction.payments.map((p) => _paymentCard(p)),
+                  ),
+                ),
               ],
             ),
+          ),
 
-            const SizedBox(height: 24),
-          ],
-        ),
+          // INFORMASI UTAMA
+          _buildSection(
+            title: "Informasi Utama",
+            icon: FontAwesomeIcons.circleInfo,
+            color: Colors.blue,
+            children: [
+              _infoCard(
+                icon: FontAwesomeIcons.user,
+                label: "Customer",
+                value: tx.customerName,
+                color: Colors.blue,
+              ),
+              _infoCard(
+                icon: FontAwesomeIcons.phone,
+                label: "Telepon",
+                value: tx.customerPhone ?? "-",
+                color: Colors.green,
+              ),
+              _infoCard(
+                icon: FontAwesomeIcons.car,
+                label: "Kendaraan",
+                value: tx.vehicle ?? "-",
+                color: Colors.orange,
+              ),
+              _infoCard(
+                icon: FontAwesomeIcons.locationDot,
+                label: "Tujuan",
+                value: tx.destination ?? "-",
+                color: Colors.red,
+              ),
+            ],
+          ),
+
+          // KEUANGAN
+          _buildSection(
+            title: "Ringkasan Keuangan",
+            icon: FontAwesomeIcons.wallet,
+            color: Colors.green,
+            children: [
+              _financialCard(
+                icon: FontAwesomeIcons.moneyBillWave,
+                label: "Total Dibayar",
+                value: CurrencyUtils.format(tx.paidAmount),
+                color: Colors.green,
+                isLarge: true,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _financialCard(
+                      icon: FontAwesomeIcons.clockRotateLeft,
+                      label: "Sisa Tagihan",
+                      value: CurrencyUtils.format(tx.outstandingAmount),
+                      color: Colors.orange,
+                      isCompact: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _financialCard(
+                      icon: FontAwesomeIcons.fileInvoiceDollar,
+                      label: "Biaya Ops",
+                      value: CurrencyUtils.format(tx.operationalCost),
+                      color: Colors.red,
+                      isCompact: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // RIWAYAT PEMBAYARAN
+          _buildSection(
+            title: "Riwayat Pembayaran",
+            icon: FontAwesomeIcons.clockRotateLeft,
+            color: Colors.purple,
+            children: [
+              if (tx.payments.isEmpty)
+                _centeredPlaceholder(
+                  icon: FontAwesomeIcons.fileInvoice,
+                  text: "Belum ada pembayaran",
+                )
+              else
+                ...tx.payments.map(_paymentCard),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _centeredPlaceholder({
+    required IconData icon,
+    required String text,
+    Color? color,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: color ?? Colors.black26),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: color ?? Colors.black54),
+          ),
+        ],
       ),
     );
   }

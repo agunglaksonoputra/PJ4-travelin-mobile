@@ -104,13 +104,17 @@ class _TransactionListPageState extends State<TransactionListPage> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            Navigator.push(
+          onTap: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => TransactionDetailPage(transaction: tx),
+                builder: (_) => const TransactionDetailPage(),
+                settings: RouteSettings(arguments: tx),
               ),
             );
+
+            // 🔴 AKAN DIPANGGIL SAAT KEMBALI
+            _loadTransactions();
           },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
