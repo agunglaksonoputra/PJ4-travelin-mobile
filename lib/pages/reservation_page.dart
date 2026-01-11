@@ -25,7 +25,7 @@ class _ReservationPageState extends State<ReservationPage> {
   final customerPhoneController = TextEditingController();
   final leaveDateController = TextEditingController();
   final returnDateController = TextEditingController();
-  final tripCategoryController = TextEditingController();
+  // final tripCategoryController = TextEditingController();
   final destinationController = TextEditingController();
   final totalCostController = TextEditingController();
   final notesController = TextEditingController();
@@ -61,7 +61,7 @@ class _ReservationPageState extends State<ReservationPage> {
     customerPhoneController.dispose();
     leaveDateController.dispose();
     returnDateController.dispose();
-    tripCategoryController.dispose();
+    // tripCategoryController.dispose();
     destinationController.dispose();
     totalCostController
       ..removeListener(_onTotalCostChangedManually)
@@ -151,13 +151,13 @@ class _ReservationPageState extends State<ReservationPage> {
                   _maybeRecalculateTotalCost();
                 },
               ),
-              const SizedBox(height: 16),
-              CustomInputField(
-                label: 'Kategori Perjalanan',
-                icon: FontAwesomeIcons.list,
-                hint: 'Masukkan kategori perjalanan',
-                controller: tripCategoryController,
-              ),
+              // const SizedBox(height: 16),
+              // CustomInputField(
+              //   label: 'Kategori Perjalanan',
+              //   icon: FontAwesomeIcons.list,
+              //   hint: 'Masukkan kategori perjalanan',
+              //   controller: tripCategoryController,
+              // ),
               const SizedBox(height: 16),
               CustomInputField(
                 label: 'Tujuan',
@@ -196,10 +196,11 @@ class _ReservationPageState extends State<ReservationPage> {
               ),
               const SizedBox(height: 16),
               CustomInputField(
-                label: 'Catatan',
+                label: 'Catatan (Opsional)',
                 icon: FontAwesomeIcons.noteSticky,
-                hint: 'Catatan tambahan',
+                hint: 'Masukkan catatan',
                 controller: notesController,
+                type: InputFieldType.note,
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -346,7 +347,7 @@ class _ReservationPageState extends State<ReservationPage> {
     }
 
     final customer = customerController.text.trim();
-    final tripCategory = tripCategoryController.text.trim();
+    // final tripCategory = tripCategoryController.text.trim();
     final destination = destinationController.text.trim();
     final phoneNumber = customerPhoneController.text.trim();
     final startDate = _parseDisplayedDate(leaveDateController.text);
@@ -410,7 +411,7 @@ class _ReservationPageState extends State<ReservationPage> {
       'vehicle_id': vehicle.id,
       'tariff_id': tariff.id,
       'status': 'planning',
-      if (tripCategory.isNotEmpty) 'trip_category': tripCategory,
+      // if (tripCategory.isNotEmpty) 'trip_category': tripCategory,
       if (destination.isNotEmpty) 'destination': destination,
       'start_date': _payloadDateFormat.format(startDate),
       'end_date': _payloadDateFormat.format(endDate),

@@ -3,6 +3,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:travelin/pages/reservation_page.dart';
+import '../helper/bottom_nav_controller.dart';
+import '../models/cashflow_model.dart';
 import '../services/user_service.dart';
 import '../services/report_service.dart';
 import '../services/transaction_service.dart';
@@ -21,17 +23,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
   String name = "Loading...";
-  double totalOperationalCost = 0;
-  double totalRevenue = 0;
-  bool isLoadingCost = true;
-  bool isLoadingRevenue = true;
+  CashFlowSummary? _currentCashFlow;
+  bool _loadingSummary = true;
+
 
   @override
   void initState() {
     super.initState();
+    _loadRole();
     loadUser();
-    loadTotalOperationalCost();
-    loadTotalRevenue();
+    loadCurrentMonthSummary();
+  }
+  Future<void> _loadRole() async {
+    await AuthHelper.loadRole();
+    if (mounted) setState(() {});
   }
 
   Future<void> loadUser() async {
@@ -58,34 +63,19 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> loadTotalRevenue() async {
+  Future<void> loadCurrentMonthSummary() async {
     try {
-      final revenue = await TransactionService.getTotalPaidAmountClosed();
-      setState(() {
-        totalRevenue = revenue;
-        isLoadingRevenue = false;
-      });
-    } catch (e) {
-      print("Error loading revenue: $e");
-      setState(() {
-        totalRevenue = 0;
-        isLoadingRevenue = false;
-      });
-    }
-  }
+      final summary = await TransactionService.getCurrentMonthCashFlow();
 
-  Future<void> loadTotalOperationalCost() async {
-    try {
-      final cost = await ReportService.getTotalOperationalCost();
       setState(() {
-        totalOperationalCost = cost;
-        isLoadingCost = false;
+        _currentCashFlow = summary;
+        _loadingSummary = false;
       });
     } catch (e) {
-      print("Error loading operational cost: $e");
+      print("Error loading current month summary: $e");
       setState(() {
-        totalOperationalCost = 0;
-        isLoadingCost = false;
+        _currentCashFlow = null;
+        _loadingSummary = false;
       });
     }
   }
@@ -100,25 +90,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> onItemTapped(int index) async {
-    setState(() => selectedIndex = index);
-
-    switch (index) {
-      case 0:
-      // stay on home
-        break;
-
-      case 1:
-        Navigator.pushReplacementNamed(context, '/actual');
-        break;
-
-      case 2:
-        Navigator.pushReplacementNamed(context, '/report');
-        break;
-
-      case 3:
-        Navigator.pushReplacementNamed(context, '/admin');
-        break;
-    }
+    await BottomNavController.onItemTapped(
+      context: context,
+      index: index,
+      onIndexChanged: (i) {
+        setState(() => selectedIndex = i);
+      },
+    );
   }
 
   void _openReservasiPage() {
@@ -139,7 +117,7 @@ class _HomePageState extends State<HomePage> {
           type: FlushbarType.success,
         );
         // Reload data if needed
-        loadTotalRevenue();
+        loadCurrentMonthSummary();
       }
     });
   }
@@ -182,7 +160,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Row(
                       children: [
-                        _circleIcon(FontAwesomeIcons.bell),
+                        // _circleIcon(FontAwesomeIcons.bell),
                         const SizedBox(width: 12),
                         GestureDetector(
                           onTap: () {
@@ -208,59 +186,56 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 12),
 
-                Column(
-                  children: [
-                    SummaryCard(
-                      color: Color(0xFF00BFA6),
-                      title: 'Pendapatan',
-                      amount:
-                          isLoadingRevenue
-                              ? 'Loading...'
-                              : _formatCurrency(totalRevenue),
-                      icon: FontAwesomeIcons.handHoldingDollar,
-                    ),
-                    const SizedBox(height: 8),
-                    SummaryCard(
-                      color: Color(0xFFE52F1D),
-                      title: 'Pengeluaran',
-                      amount:
-                          isLoadingCost
-                              ? 'Loading...'
-                              : _formatCurrency(totalOperationalCost),
-                      icon: FontAwesomeIcons.moneyBillTransfer,
-                    ),
-                    const SizedBox(height: 8),
-                    SummaryCard(
-                      color: Color(0xFF9D00FF),
-                      title: 'Profit',
-                      amount:
-                          (isLoadingRevenue || isLoadingCost)
-                              ? 'Loading...'
-                              : _formatCurrency(
-                                totalRevenue - totalOperationalCost,
-                              ),
-                      icon: FontAwesomeIcons.sackDollar,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // PLANNING
-                const Text(
-                  'PLANNING',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontSize: 18,
+              Column(
+                children: [
+                  SummaryCard(
+                    color: const Color(0xFF00BFA6),
+                    title: 'Pendapatan',
+                    amount: _loadingSummary
+                        ? 'Loading...'
+                        : _formatCurrency(_currentCashFlow?.totalCashFlow ?? 0),
+                    icon: FontAwesomeIcons.handHoldingDollar,
                   ),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
-                // const Expanded(
-                //   flex: 3,
-                //   child: PlanningTable(),
-                // ),
+                  SummaryCard(
+                    color: const Color(0xFFE52F1D),
+                    title: 'Deposit',
+                    amount: _loadingSummary
+                        ? 'Loading...'
+                        : _formatCurrency(_currentCashFlow?.totalCashIn ?? 0),
+                    icon: FontAwesomeIcons.moneyBillTransfer,
+                  ),
+                  const SizedBox(height: 8),
+
+                  SummaryCard(
+                    color: const Color(0xFF9D00FF),
+                    title: 'Profit',
+                    amount: _loadingSummary
+                        ? 'Loading...'
+                        : _formatCurrency(_currentCashFlow?.totalProfit ?? 0),
+                    icon: FontAwesomeIcons.sackDollar,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // PLANNING
+              // const Text(
+              //   'PLANNING',
+              //   style: TextStyle(
+              //     fontWeight: FontWeight.bold,
+              //     color: Colors.black,
+              //     fontSize: 18,
+              //   ),
+              // ),
+              // const SizedBox(height: 12),
+
+              // const Expanded(
+              //   flex: 3,
+              //   child: PlanningTable(),
+              // ),
               ],
             ),
           ),

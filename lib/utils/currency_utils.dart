@@ -17,6 +17,15 @@ class CurrencyUtils {
     ).format(value);
   }
 
+  static String formatCurrencyInDouble(double? value) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(value ?? 0);
+  }
+
   static String compact(num value) {
     return NumberFormat.compactCurrency(
       locale: 'id_ID',

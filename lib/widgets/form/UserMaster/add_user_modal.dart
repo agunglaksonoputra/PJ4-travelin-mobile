@@ -121,7 +121,7 @@ class _AddUserModalState extends State<AddUserModal> {
               hint: "Enter password",
               icon: FontAwesomeIcons.lock,
               controller: passwordController,
-              obscure: true,
+              type: InputFieldType.password,
             ),
             const SizedBox(height: 12),
             RoleDropdown(

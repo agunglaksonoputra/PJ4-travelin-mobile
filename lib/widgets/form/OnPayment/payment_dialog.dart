@@ -1,248 +1,277 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:travelin/models/transaction_models.dart';
+import 'package:travelin/services/payment_service.dart';
+import 'package:travelin/utils/app_logger.dart';
+import 'package:travelin/utils/currency_utils.dart';
+import 'package:travelin/widgets/button/primary_button.dart';
+import 'package:travelin/widgets/date_input_field.dart';
 
-import '../../../services/payment_service.dart';
-import '../../../utils/currency_input_utils.dart';
-import '../../../utils/validator/OnPayment/payment_validator.dart';
+import '../../../utils/format_month.dart';
 import '../../custom_flushbar.dart';
+import '../../custom_input_field.dart';
 
 class PaymentDialog extends StatefulWidget {
+  final TransactionModel transaction;
+  final double? remainingAmount;
+  final VoidCallback onPaymentSuccess;
+
   const PaymentDialog({
     super.key,
-    required this.transactionId,
+    required this.transaction,
     this.remainingAmount,
     required this.onPaymentSuccess,
   });
-
-  final int transactionId;
-  final double? remainingAmount;
-  final VoidCallback onPaymentSuccess;
 
   @override
   State<PaymentDialog> createState() => _PaymentDialogState();
 }
 
 class _PaymentDialogState extends State<PaymentDialog> {
+  final _formKey = GlobalKey<FormState>();
+
   late final TextEditingController _amountController;
   late final TextEditingController _noteController;
-
-  final NumberFormat _dialogCurrencyFormat = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp ',
-    decimalDigits: 0,
-  );
+  late final TextEditingController _paymentDate;
 
   bool _isFormattingAmount = false;
   bool _isSubmitting = false;
-  String _selectedMethod = 'cash';
+  String _selectedMethod = 'transfer';
   String? _amountError;
   String? _methodError;
 
-  final TextStyle _labelStyle = const TextStyle(
+  final TextStyle _labelStyle = TextStyle(
     fontWeight: FontWeight.bold,
-    fontSize: 15,
+    fontSize: 14,
   );
+
   final TextStyle _infoStyle = const TextStyle(
-    color: Colors.black54,
-    fontSize: 13,
+    color: Colors.black,
+    fontSize: 12,
   );
 
   @override
   void initState() {
     super.initState();
-    _amountController = TextEditingController(
-      text:
-          widget.remainingAmount != null && widget.remainingAmount! > 0
-              ? _dialogCurrencyFormat.format(widget.remainingAmount!)
-              : '',
-    );
+    _amountController = TextEditingController();
     _noteController = TextEditingController();
+    _paymentDate = TextEditingController();
   }
 
   @override
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
+    _paymentDate.dispose();
     super.dispose();
   }
 
-  void _handleAmountChanged(String value) {
-    if (_isFormattingAmount) return;
-
-    final result = formatCurrencyInput(value, _dialogCurrencyFormat);
-
-    if (result.shouldClear) {
-      _isFormattingAmount = true;
-      _amountController
-        ..text = ''
-        ..selection = const TextSelection.collapsed(offset: 0);
-      _isFormattingAmount = false;
-      setState(() => _amountError = null);
-      return;
-    }
-
-    if (!result.shouldUpdateText) {
-      setState(() => _amountError = null);
-      return;
-    }
-
-    final formatted = result.formattedValue;
-    if (formatted == null) {
-      setState(() => _amountError = null);
-      return;
-    }
-
-    _isFormattingAmount = true;
-    _amountController
-      ..text = formatted
-      ..selection = TextSelection.collapsed(offset: formatted.length);
-    _isFormattingAmount = false;
-    setState(() => _amountError = null);
+  double _parseAmount() {
+    return double.parse(
+      _amountController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+    );
   }
 
   Future<void> _handleSubmit() async {
-    if (_isSubmitting) return;
+    final isValid = _formKey.currentState!.validate();
+    if (!isValid) return;
 
-    final amountText = _amountController.text.trim();
-    final amount = parseCurrencyToDouble(amountText);
-
-    // Validate form using PaymentValidator
-    final validationResult = PaymentValidator.validatePaymentForm(
-      amount: amount,
-      method: _selectedMethod,
-      remainingBalance: widget.remainingAmount,
-    );
-
-    if (!validationResult.isValid) {
-      setState(() {
-        _amountError = validationResult.amountError;
-        _methodError = validationResult.methodError;
-      });
-      return;
-    }
+    final amount = _parseAmount();
+    final note = _noteController.text.trim();
 
     setState(() {
       _isSubmitting = true;
-      _amountError = null;
-      _methodError = null;
     });
 
     try {
       await PaymentService.createPayment(
-        transactionId: widget.transactionId,
-        amount: amount!,
+        transactionId: widget.transaction.id,
+        amount: amount,
         method: _selectedMethod,
-        note:
-            _noteController.text.trim().isEmpty
-                ? null
-                : _noteController.text.trim(),
+        paidAt: safeDateForApi(_paymentDate.text),
+        note: note.isEmpty ? null : note,
       );
 
       if (!mounted) return;
-      Navigator.of(context).pop(true);
-      widget.onPaymentSuccess();
-    } catch (error) {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
 
-      if (!mounted) return;
+      widget.onPaymentSuccess();
+      Navigator.of(context).pop(true);
+    } catch (e, stackTrace) {
+      AppLogger.e('Failed to create payment', error: e, stackTrace: stackTrace);
+
       CustomFlushbar.show(
         context,
-        message: error.toString(),
+        message: "Gagal menyimpan pembayaran",
         type: FlushbarType.error,
       );
+
+      if (!mounted) return;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return PopScope(
-      canPop: !_isSubmitting,
-      onPopInvoked: (didPop) {
-        if (!didPop && _isSubmitting) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Mohon tunggu, sedang memproses pembayaran...'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      },
+    return SafeArea(
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+          physics: const BouncingScrollPhysics(),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDragHandle(),
+                const SizedBox(height: 12),
+
+                const Text(
+                  "Detail Kendaraan",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+
+                _infoTransaction(widget.transaction),
+                const SizedBox(height: 12),
+
+                _buildAmountField(widget.transaction),
+                const SizedBox(height: 12),
+
+                _buildMethodField(),
+                const SizedBox(height: 12),
+
+                CustomInputField(
+                  label: "Tanggal pembayaran",
+                  icon: FontAwesomeIcons.calendarDay,
+                  hint: "Masukkan tanggal pembayaran",
+                  controller: _paymentDate,
+                  type: InputFieldType.date,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Tanggal pembayaran wajib diisi';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                _buildNoteField(),
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: PrimaryButton(
+                    label: 'Simpan',
+                    isLoading: _isSubmitting,
+                    onPressed: _isSubmitting ? null : _handleSubmit,
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              _buildHeader(),
-              const SizedBox(height: 16),
-              _buildAmountField(),
-              const SizedBox(height: 16),
-              _buildMethodField(),
-              const SizedBox(height: 16),
-              _buildNoteField(),
-              const SizedBox(height: 20),
-              _buildActionButtons(),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return const Text(
-      'Tambah Pembayaran',
-      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+  Widget _buildDragHandle() {
+    return Center(
+      child: Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
     );
   }
 
-  Widget _buildAmountField() {
+  Widget _infoTransaction(TransactionModel transaction) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                FontAwesomeIcons.circleInfo,
+                size: 18,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "Info Transaksi",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Total: ${CurrencyUtils.formatCurrencyInDouble(transaction.totalCost)}",
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmountField(TransactionModel transaction) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Nominal Pembayaran', style: _labelStyle),
+        CustomInputField(
+          label: 'Nominal Pembayaran',
+          icon: FontAwesomeIcons.moneyBillWave,
+          hint: 'Masukkan nominal pembayaran',
+          controller: _amountController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [],
+          type: InputFieldType.currency,
+          quickAmount: transaction.totalCost,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Nominal pembayaran tidak boleh kosong';
+            }
+
+            final amount = double.tryParse(
+              value.replaceAll(RegExp(r'[^0-9]'), ''),
+            );
+
+            if (amount == null || amount <= 0) {
+              return 'Nominal pembayaran tidak valid';
+            }
+
+            if (widget.remainingAmount != null &&
+                amount > widget.remainingAmount!) {
+              return 'Nominal melebihi sisa hutang';
+            }
+
+            return null;
+          },
+        ),
+
         if (widget.remainingAmount != null && widget.remainingAmount! > 0)
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'Sisa Hutang: Rp ${(widget.remainingAmount! / 1).toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match.group(1)}.')}',
+              'Sisa Hutang: ${CurrencyUtils.formatCurrencyInDouble(widget.remainingAmount)}',
               style: _infoStyle,
             ),
           ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _amountController,
-          decoration: InputDecoration(
-            hintText: 'Masukkan nominal pembayaran',
-            filled: true,
-            fillColor: Colors.grey[200],
-            prefixIcon: const Icon(FontAwesomeIcons.moneyBillWave),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            errorText: _amountError,
-          ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          onChanged: _handleAmountChanged,
-        ),
       ],
     );
   }
@@ -251,44 +280,109 @@ class _PaymentDialogState extends State<PaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Metode Pembayaran', style: _labelStyle),
-        const SizedBox(height: 4),
-        DropdownButtonFormField<String>(
-          value: _selectedMethod,
-          items: const [
-            DropdownMenuItem(value: 'cash', child: Text('Cash')),
-            DropdownMenuItem(value: 'transfer', child: Text('Transfer')),
-          ],
-          onChanged:
-              _isSubmitting
-                  ? null
-                  : (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedMethod = value;
-                        _methodError = null;
-                      });
-                    }
-                  },
-          dropdownColor: Colors.white,
-          decoration: InputDecoration(
-            hintText: 'Pilih metode pembayaran',
-            filled: true,
-            fillColor: Colors.grey[200],
-            prefixIcon: const Icon(FontAwesomeIcons.wallet),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            errorText: _methodError,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 4,
+        Text('Metode Pembayaran', style: _labelStyle,),
+        const SizedBox(height: 6),
+
+        _methodRadioTile(
+          value: 'transfer',
+          label: 'Transfer',
+          icon: FontAwesomeIcons.buildingColumns,
+        ),
+        const SizedBox(height: 6),
+        _methodRadioTile(
+          value: 'cash',
+          label: 'Cash',
+          icon: FontAwesomeIcons.moneyBillWave,
+        ),
+
+        if (_methodError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              _methodError!,
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+              ),
             ),
           ),
-          isExpanded: true,
-        ),
       ],
+    );
+  }
+
+  Widget _methodRadioTile({
+    required String value,
+    required String label,
+    required IconData icon,
+  }) {
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: _isSubmitting
+          ? null
+          : () {
+        setState(() {
+          _selectedMethod = value;
+          _methodError = null;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: Colors.blue,
+            ),
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+
+            Radio<String>(
+              value: value,
+              groupValue: _selectedMethod,
+              // activeColor: Colors.blue,
+              fillColor: MaterialStateProperty.resolveWith<Color>((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return Colors.blue; // aktif
+                }
+                return Colors.grey.shade300; // tidak aktif
+              }),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              onChanged: _isSubmitting
+                  ? null
+                  : (val) {
+                if (val != null) {
+                  setState(() {
+                    _selectedMethod = val;
+                    _methodError = null;
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -296,55 +390,15 @@ class _PaymentDialogState extends State<PaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Catatan (Opsional)', style: _labelStyle),
-        const SizedBox(height: 4),
-        TextField(
+        CustomInputField(
+          label: 'Catatan (Opsional)',
+          icon: FontAwesomeIcons.noteSticky,
+          hint: 'Masukkan catatan',
           controller: _noteController,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Masukkan catatan',
-            filled: true,
-            fillColor: Colors.grey[200],
-            prefixIcon: const Icon(FontAwesomeIcons.noteSticky),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-          ),
+          type: InputFieldType.note,
         ),
       ],
     );
   }
 
-  Widget _buildActionButtons() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _handleSubmit,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
-          disabledBackgroundColor: Colors.grey,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child:
-            _isSubmitting
-                ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                  ),
-                )
-                : const Text(
-                  'SIMPAN',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-      ),
-    );
-  }
 }

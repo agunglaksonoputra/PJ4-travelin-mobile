@@ -40,7 +40,7 @@ class PaymentModel {
       'transaction_id': transactionId,
       'method': method,
       'amount': amount,
-      'paid_at': paidAt?.toIso8601String(),
+      'paid_at': paidAt,
       'note': note,
       if (transaction != null) 'transaction': transaction!.toJson(),
     };
