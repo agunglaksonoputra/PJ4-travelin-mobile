@@ -1,3 +1,5 @@
+import 'package:travelin/models/transaction_report_model.dart';
+
 import '../config/api_config.dart';
 import 'api_services.dart';
 

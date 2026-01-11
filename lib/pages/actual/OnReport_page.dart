@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:travelin/helper/bottom_nav_controller.dart';
+import 'package:travelin/pages/report/transaction_detail_page.dart';
+import 'package:travelin/widgets/form/OnReport/report_dialog.dart';
+import 'package:travelin/widgets/trip_card.dart';
+import 'package:travelin/widgets/vehicle_selector.dart';
+import '../../models/transaction_models.dart';
 import '../../models/vehicle_models.dart';
+import '../../services/transaction_service.dart';
 import '../../utils/auth_helper.dart';
 import '../../widgets/bottom_navbar.dart';
-import '../../widgets/vehicle_dropdown.dart';
-import '../../widgets/form/OnReport/report_dialog.dart';
 import '../../widgets/custom_flushbar.dart';
-import 'package:travelin/services/bookings_service.dart';
 
 class OnReportPage extends StatefulWidget {
   const OnReportPage({super.key});
@@ -16,51 +20,72 @@ class OnReportPage extends StatefulWidget {
 }
 
 class _OnReportPageState extends State<OnReportPage> {
-  VehicleModel? _selectedVehicle;
+  int selectedIndex = 1;
 
-  List<dynamic> transactions = [];
-  bool isLoadingTransactions = false;
-  String? transactionError;
+  bool _isLoading = false;
+  String? _error;
+
+  VehicleModel? selectedVehicle;
+  List<VehicleModel> vehicleList = [];
+
+  List<TransactionModel> _transactions = [];
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+
+    if (args is Map) {
+      selectedVehicle ??= args['selectedVehicle'] as VehicleModel?;
+      vehicleList = args['vehicleList'] as List<VehicleModel>;
+    }
+
+    if (selectedVehicle != null && _transactions.isEmpty) {
+      _isLoading = true;
+      _loadTransactions();
+    }
   }
 
-  Future<void> _loadTransactionsForVehicle(int vehicleId) async {
+  Future<void> _loadTransactions() async {
+    if (selectedVehicle == null) return;
+
     setState(() {
-      isLoadingTransactions = true;
-      transactionError = null;
-      transactions = [];
+      _isLoading = true;
+      _error = null;
+      _transactions = [];
     });
 
     try {
-      final allTxs = await BookingService.getTransactionsByVehicle(vehicleId);
+      await Future.delayed(const Duration(milliseconds: 300));
 
-      // Filter only transactions with 'reporting' status
-      final txs =
-          allTxs
-              .where(
-                (t) =>
-                    t is Map && (t['status'] ?? '').toString() == 'reporting',
-              )
-              .toList();
+      final items = await TransactionService.getTransactions(
+        status: 'reporting',
+        vehicleId: selectedVehicle!.id,
+      );
 
       if (!mounted) return;
       setState(() {
-        transactions = txs;
-        isLoadingTransactions = false;
+        _transactions = items;
+        _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        transactionError = e.toString();
-        isLoadingTransactions = false;
+        _isLoading = false;
+        _error = e.toString();
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
+
+  Future<void> onItemTapped(int index) async {
+    await BottomNavController.onItemTapped(
+      context: context,
+      index: index,
+      onIndexChanged: (i) {
+        setState(() => selectedIndex = i);
+      },
+    );
   }
 
   @override
@@ -68,177 +93,180 @@ class _OnReportPageState extends State<OnReportPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F3F3),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        scrolledUnderElevation: 0,
+        elevation: 0,
         title: const Text(
           "On Report",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pushReplacementNamed(context, '/actual'),
+          icon: const Icon(FontAwesomeIcons.angleLeft, color: Colors.black),
+          onPressed: () {
+            Navigator.pop(context, selectedVehicle);
+          },
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            VehicleDropdown(
-              showLabel: false,
-              initialVehicle: _selectedVehicle,
-              onChanged: (vehicle) {
-                setState(() {
-                  _selectedVehicle = vehicle;
-                });
-                _loadTransactionsForVehicle(vehicle.id);
-              },
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child:
-                  transactions.isEmpty
-                      ? Center(
-                        child: Text(
-                          'Tidak ada transaksi dengan status reporting',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      )
-                      : ListView.builder(
-                        itemCount: transactions.length,
-                        itemBuilder: (c, i) => _buildReportCard(c, i),
-                      ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
-        role: AuthHelper.currentRole, // ⬅️ penting
-        onTap: (i) {
-          switch (i) {
-            case 0:
-              Navigator.pushReplacementNamed(context, '/home');
-              break;
-            case 1:
-              Navigator.pushReplacementNamed(context, '/actual');
-              break;
-            case 2:
-            // already on report
-              break;
-          }
-        },
-      ),
-    );
-  }
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              VehicleSelector(
+                selectedVehicle: selectedVehicle,
+                vehicleList: vehicleList,
+                onVehicleSelected: (vehicle) async {
+                  if (vehicle.id == selectedVehicle?.id) return;
 
-  Widget _buildReportCard(BuildContext context, int index) {
-    final tx = transactions[index];
-    final customer =
-        (tx is Map && tx['customer_name'] != null)
-            ? tx['customer_name'].toString()
-            : '—';
-    final tripCode =
-        (tx is Map && (tx['trip_code'] ?? tx['tripCode']) != null)
-            ? (tx['trip_code'] ?? tx['tripCode']).toString()
-            : null;
-    final totalPayment =
-        (tx is Map && tx['total_cost'] != null)
-            ? double.tryParse(tx['total_cost'].toString()) ?? 0.0
-            : 0.0;
-    final dateStr =
-        (tx is Map && (tx['start_date'] ?? tx['created_at']) != null)
-            ? (() {
-              try {
-                return DateFormat('dd/MM/yyyy').format(
-                  DateTime.parse(
-                    (tx['start_date'] ?? tx['created_at']).toString(),
-                  ),
-                );
-              } catch (_) {
-                return '-';
-              }
-            })()
-            : '-';
+                  setState(() {
+                    selectedVehicle = vehicle;
+                  });
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Report ${tripCode?.isNotEmpty == true ? tripCode : '#${index + 1}'}",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-          ),
-          const SizedBox(height: 8),
-          const Divider(height: 1, color: Colors.black12),
-          const SizedBox(height: 8),
-          Text("Customer: $customer"),
-          const Text("Total Trip: 1"),
-          Text(
-            "Total Payment: Rp ${NumberFormat.currency(locale: 'id', symbol: '', decimalDigits: 0).format(totalPayment)}",
-          ),
-          Text("Date: $dateStr"),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                  await _loadTransactions();
+                },
               ),
-              onPressed: () {
-                showModalBottomSheet<bool>(
-                  context: context,
-                  isScrollControlled: true,
-                  isDismissible: true,
+
+              const SizedBox(height: 20),
+
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _loadTransactions,
+                  color: Colors.blue,
                   backgroundColor: Colors.white,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                  ),
-                  builder:
-                      (context) => ReportDialog(
-                        transaction: tx,
-                        onReportSuccess: () {
-                          if (_selectedVehicle != null) {
-                            _loadTransactionsForVehicle(_selectedVehicle!.id);
-                          }
-                        },
-                      ),
-                ).then((success) {
-                  if (success == true && mounted) {
-                    _loadTransactionsForVehicle(_selectedVehicle!.id);
-                    CustomFlushbar.show(
-                      context,
-                      message: 'Report berhasil disimpan',
-                      type: FlushbarType.success,
-                    );
-                  }
-                });
-              },
-              child: const Text(
-                "TRIP REPORT",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                  child: _buildTransactionList(),
                 ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
+
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: selectedIndex,
+        role: AuthHelper.currentRole,
+        onTap: onItemTapped,
+      ),
+    );
+  }
+
+  Widget _buildTransactionList() {
+    // 🟡 Belum pilih kendaraan
+    if (selectedVehicle == null) {
+      return _centeredPlaceholder(
+        icon: Icons.directions_bus,
+        text: 'Pilih kendaraan untuk melihat transaksi.',
+      );
+    }
+
+    // 🔵 Loading
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.blue),
+      );
+    }
+
+    // 🔴 Error
+    if (_error != null) {
+      return _centeredPlaceholder(
+        icon: Icons.error_outline,
+        text: _error!,
+        color: Colors.redAccent,
+      );
+    }
+
+    // 🟣 Tidak ada transaksi
+    if (_transactions.isEmpty) {
+      return _centeredPlaceholder(
+        icon: Icons.receipt_long,
+        text: 'Belum ada transaksi report.',
+      );
+    }
+
+    // ✅ Ada data → tampilkan list
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: _transactions.map(
+            (tx) => TripCard(
+          transaction: tx,
+          type: TripCardType.report,
+          // onPayment: () => _showPaymentDialog(context, tx),
+            onReport: () => _showReportDialog(context, tx),
+          onView: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const TransactionDetailPage(
+                  type: TransactionDetailType.actual,
+                ),
+                settings: RouteSettings(
+                  arguments: {
+                    'transactionId': tx.id,
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ).toList(),
+    );
+  }
+
+  Future<void> _showReportDialog(
+      BuildContext context,
+      TransactionModel transaction,
+      ) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (dialogContext) {
+        // return PaymentDialog(
+        //   transaction: transaction,
+        //   type: PaymentDialogType.payment,
+        //   onPaymentSuccess: _loadTransactions,
+        // );
+        return ReportDialog(
+          transaction: transaction,
+          onReportSuccess: _loadTransactions,
+        );
+      },
+    );
+
+    if (result == true && mounted) {
+      CustomFlushbar.show(
+        context,
+        message: 'Payment plan updated',
+        type: FlushbarType.success,
+      );
+    }
+  }
+
+  Widget _centeredPlaceholder({
+    required IconData icon,
+    required String text,
+    Color? color,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: color ?? Colors.black26),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: color ?? Colors.black54),
           ),
         ],
       ),
     );
   }
+
 }

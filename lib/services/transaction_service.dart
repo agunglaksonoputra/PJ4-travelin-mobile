@@ -1,4 +1,5 @@
 import '../config/api_config.dart';
+import '../models/cashflow/monthly_transaction_detail_model.dart';
 import '../models/cashflow_model.dart';
 import '../models/transaction_models.dart';
 import '../models/transaction_summary_model.dart';
@@ -398,5 +399,41 @@ class TransactionService {
       rethrow;
     }
   }
+
+  static Future<MonthlyTransactionDetail> getMonthlyTransactionDetail(
+      int transactionId,
+      ) async {
+    final endpoint = 'monthly-report/cashflow/$transactionId';
+
+    AppLogger.i(
+      'Fetching monthly transaction cashflow detail for id=$transactionId',
+    );
+
+    try {
+      final response = await ApiServices.get(_baseUrl, endpoint);
+
+      AppLogger.d('Monthly transaction detail response: $response');
+
+      final payload = _asMap(response);
+      _ensureSuccess(payload);
+
+      final data = payload['data'];
+      if (data is Map<String, dynamic>) {
+        return MonthlyTransactionDetail.fromJson(data);
+      }
+
+      throw Exception(
+        'Invalid response format: expected object in data field',
+      );
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Failed to fetch monthly transaction cashflow detail',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
 
 }

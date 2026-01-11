@@ -11,7 +11,7 @@ import '../../services/vehicle_service.dart';
 import '../../utils/auth_helper.dart';
 import '../../widgets/bottom_navbar.dart';
 import '../../widgets/custom_flushbar.dart';
-import '../../widgets/form/OnPayment/payment_dialog.dart';
+import '../../widgets/form/payment_dialog.dart';
 import '../../widgets/tariff_dropdown.dart';
 import '../../widgets/vehicle_selector.dart';
 
@@ -283,6 +283,7 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
       builder: (dialogContext) {
         return PaymentDialog(
           transaction: transaction,
+          type: PaymentDialogType.planning,
           onPaymentSuccess: _loadTransactions,
         );
       },
@@ -317,6 +318,5 @@ class _OnPlanningPageState extends State<OnPlanningPage> {
       ),
     );
   }
-
 
 }

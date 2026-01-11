@@ -47,16 +47,16 @@ class MonthlyTransactionDetail {
   factory MonthlyTransactionDetail.fromJson(Map<String, dynamic> json) {
     return MonthlyTransactionDetail(
       transactionId: int.parse(json['transaction_id'].toString()),
-      tripCode: json['trip_code'],
-      customerName: json['customer_name'],
+      tripCode: json['trip_code'] ?? '',
+      customerName: json['customer_name'] ?? '',
       customerPhone: json['customer_phone'],
       destination: json['destination'],
       vehicle: json['vehicle'],
-      status: json['status'],
-      paidAmount: double.parse(json['paid_amount'].toString()),
-      outstandingAmount: double.parse(json['outstanding_amount'].toString()),
-      operationalCost: double.parse(json['operational_cost'].toString()),
-      profit: double.parse(json['profit'].toString()),
+      status: json['status'] ?? '',
+      paidAmount: _toDouble(json['paid_amount'] ?? json['amount_total']),
+      outstandingAmount: _toDouble(json['outstanding_amount']),
+      operationalCost: _toDouble(json['operational_cost']),
+      profit: _toDouble(json['profit']),
       isClosed: json['isClosed'] ?? false,
       startDate: json['start_date'],
       endDate: json['end_date'],
@@ -66,4 +66,13 @@ class MonthlyTransactionDetail {
           .toList(),
     );
   }
+}
+
+double _toDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is num) return value.toDouble();
+  if (value is String && value.isNotEmpty) {
+    return double.tryParse(value) ?? 0.0;
+  }
+  return 0.0;
 }

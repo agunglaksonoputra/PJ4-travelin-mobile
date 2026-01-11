@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:travelin/models/payment_models.dart';
 
 import 'vehicle_models.dart';
 
@@ -25,6 +26,7 @@ class TransactionModel {
     this.createdAt,
     this.updatedAt,
     this.vehicle,
+    this.payments,
   });
 
   final int id;
@@ -48,6 +50,7 @@ class TransactionModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final VehicleModel? vehicle;
+  final List<PaymentModel>? payments;
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     return TransactionModel(
@@ -75,6 +78,12 @@ class TransactionModel {
           json['vehicle'] is Map<String, dynamic>
               ? VehicleModel.fromJson(json['vehicle'] as Map<String, dynamic>)
               : null,
+      payments:
+      json['payments'] is List
+          ? (json['payments'] as List)
+          .map((e) => PaymentModel.fromJson(e))
+          .toList()
+          : null,
     );
   }
 
