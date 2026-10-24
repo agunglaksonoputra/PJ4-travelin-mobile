@@ -80,7 +80,3 @@ lib/
 ├── utils/        # Formatting, validation, and logging helpers
 └── widgets/      # Reusable UI components
 ```
-
-## Screenshots and demo
-
-Add current screenshots or a short demo recording here. Avoid using real customer, transaction, or account data in portfolio materials.
